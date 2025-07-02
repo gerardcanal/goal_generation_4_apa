@@ -1,2 +1,5 @@
 # goal_generation_4_apa
-Work on goal generation for autonomous planning agents
+Goal Generation for Autonomous Planning Agents
+
+Usage documentation to be updated.
+
