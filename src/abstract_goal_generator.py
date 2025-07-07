@@ -12,15 +12,18 @@ import time
 import subprocess
 import re
 import os
+import uuid
+
 DEBUG = True
 
 class AbstractGoalGenerator:
-    def __init__(self, domain_file, problem_file, n_goals=15, current_time=(datetime.now().hour + datetime.now().minute/60.0), check_unreachable=True, check_mutexes=True):
+    def __init__(self, domain_file, problem_file, n_goals=15, current_time=(datetime.now().hour + datetime.now().minute/60.0), check_unreachable=True, check_mutexes=True, uuid=uuid.uuid4().hex):
         self.pddl_extractor = PDDLExtractor(domain_file, problem_file)
         self.domain_name = self.pddl_extractor.get_domain_name()
 
         self.problem = self.pddl_extractor.problem
 
+        self.uuid = uuid  # Unique identifier for the goal generation instance
 
         self.n_goals = n_goals  # Horizon in RDDL
         self.current_time = current_time
@@ -207,10 +210,12 @@ class AbstractGoalGenerator:
         #### Get unreachable goals from rewrite. This must be done in two steps, first to find the trivially false goals, and then to get the RPG ones
         # Write problem to file
         def run_reachability_checker():
-            with open('/tmp/problem_all_grap_goals.pddl', 'w') as f:
+            if not os.path.exists('/tmp/goal_generation'):
+                os.makedirs('/tmp/goal_generation')
+            with open(f'/tmp/goal_generation/{self.uuid}_problem_all_grap_goals.pddl', 'w') as f:
                 f.write(str(problem))
             reachability_exe = os.path.dirname(__file__) + '/../bin/reachability_rewrite-no-lp'
-            cmd = reachability_exe + ' --do-not-plan ' + self.pddl_extractor.domain_file + ' /tmp/problem_all_grap_goals.pddl'
+            cmd = reachability_exe + ' --do-not-plan ' + self.pddl_extractor.domain_file + f' /tmp/goal_generation/{self.uuid}_problem_all_grap_goals.pddl'
             output = subprocess.check_output(cmd, shell=True, stderr=subprocess.DEVNULL).decode('utf-8')
             return output
         output = run_reachability_checker()

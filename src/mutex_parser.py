@@ -85,8 +85,8 @@ class PDDLMutexParser:
 
 
 if __name__ == '__main__':
-    domain_file = '/home/gerard/code/ROSPlan_ws/src/goalgeneration_as_planning/testdomains/domain.pddl'
-    problem_file = '/home/gerard/code/ROSPlan_ws/src/goalgeneration_as_planning/testdomains/problem.pddl'
+    domain_file = os.path.dirname(__file__) + '/../testdomains/domain.pddl'
+    problem_file = os.path.dirname(__file__) + '/../testdomains/problem.pddl'
 
     pddl_mutex_manager = PDDLMutexParser(PDDLExtractor(domain_file, problem_file))
     output = pddl_mutex_manager._run_mutex_finder()

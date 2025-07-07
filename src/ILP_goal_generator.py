@@ -1,25 +1,18 @@
 #!/usr/bin/env python
 
-from domain_problem_parser import PDDLExtractor
 from datetime import datetime
-from plan_graphs.relaxed_plan_graph import RelaxedPlanGraph
-import numpy as np
 from abstract_goal_generator import AbstractGoalGenerator
-
 from ortools.linear_solver import pywraplp
-import sys
-
-
-# TODO FIX rospkg import in AbstractDomainGenerator
-# Until then.. export ROS_PACKAGE_PATH="$HOME/code/ROSPlan_ws/src/goalgeneration_as_planning"
+import sys, os
+import numpy as np
+import uuid
 
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 
-
 class ILPGoalGenerator:
-    def __init__(self, domain_file, problem_file, n_goals=15, current_time=(datetime.now().hour + datetime.now().minute/60.0), check_unreachable=True, check_mutexes=True, debug=True):
-        self.agg = AbstractGoalGenerator(domain_file, problem_file, n_goals, current_time, check_unreachable, check_mutexes)
+    def __init__(self, domain_file, problem_file, n_goals=15, current_time=(datetime.now().hour + datetime.now().minute/60.0), check_unreachable=True, check_mutexes=True, uuid=uuid.uuid4().hex, debug=True):
+        self.agg = AbstractGoalGenerator(domain_file, problem_file, n_goals, current_time, check_unreachable, check_mutexes, uuid=uuid)
         self.potential_goals = self.agg.get_grounded_predicates(self.agg.potential_goals)
         self.solver = None
         self.debug = debug
@@ -27,7 +20,7 @@ class ILPGoalGenerator:
     def load_cfg(self, cfg_file):
         self.agg.load_cfg(cfg_file)
 
-    def make_ILP(self, solver_id="SAT"):
+    def make_ILP(self, solver_id="GLOP"):
         # solver_id is case insensitive, and the following names are supported:
         #   - CLP_LINEAR_PROGRAMMING or CLP
         #   - CBC_MIXED_INTEGER_PROGRAMMING or CBC
@@ -52,7 +45,7 @@ class ILPGoalGenerator:
 
         # Define variables
         # x and y are integer non-negative variables.
-        infinity = self.solver.infinity()
+        #infinity = self.solver.infinity()
         g = []
         b = []
         for i, pg in enumerate(self.potential_goals):        # TODO iterate over the potential goals
@@ -64,7 +57,8 @@ class ILPGoalGenerator:
 
         # Add constraints
         # C1 : sum_i{g_i} <= N
-        self.solver.Add(sum([g[i] for i in range(len(g))]) <= self.agg.n_goals)
+        n_goals = self.agg.n_goals if self.agg.n_goals > 0 else len(self.potential_goals)  # If n_goals is not set, use the number of potential goals
+        self.solver.Add(sum([g[i] for i in range(len(g))]) <= n_goals)
 
         # C2 : g_i + g_j <= 1 for all mutex pairs (i,j)
         for instance, mutex_group in self.agg.mutex_groups:
@@ -76,6 +70,15 @@ class ILPGoalGenerator:
             self.solver.Add(g[idx] == 0)  # If a goal is unreachable, its variable must be 0
         print("Number of constraints =", self.solver.NumConstraints())
 
+        # C4 : g_i = 0 if goal i is already achieved in initial state?!
+        # initial_state = self.agg.problem.get_initial_state()
+        # initial_state = [str(self.agg.problem.grounding.get_proposition_from_id(p)) for p in np.nonzero(initial_state.logical)[0]]
+        # for pg in self.potential_goals:
+        #     pg = str(pg)
+        #     if pg in initial_state:
+        #         idx = goal2idx[pg]
+        #         self.solver.Add(g[idx] == 0)  # If a goal is already achieved, its variable must be 0
+        
         # Objective
         objective = self.solver.Objective()
         for i in range(len(self.potential_goals)):
@@ -99,7 +102,7 @@ class ILPGoalGenerator:
                 if (self.g[i].solution_value()):
                     assert str(self.potential_goals[i]) in self.g[i].name(), f"Error: Goal variable {i} name {self.g[i].name()} does not match potential goal {self.potential_goals[i]}"
                     self.dprint(f"Goal {i}: {self.potential_goals[i]} is selected with benefit {self.b[i]}.")
-                    goals.append((str(self.potential_goals[i])[1:-1].split(), self.b[i]))  # Remove parentheses and split into list
+                    goals.append((self.potential_goals[i], self.b[i]))  # Remove parentheses and split into list
             print()
             print(f"Problem solved in {self.solver.wall_time():d} milliseconds")
             print(f"Problem solved in {self.solver.iterations():d} iterations")
@@ -114,15 +117,15 @@ class ILPGoalGenerator:
             print(*args, **kwargs)
 
 if __name__ == '__main__':
-    domain_file = '/home/gerard/code/ROSPlan_ws/src/goalgeneration_as_planning/testdomains/domain.pddl'
-    problem_file = '/home/gerard/code/ROSPlan_ws/src/goalgeneration_as_planning/testdomains/problem.pddl'
-    # domain_file = '/home/gerard/code/ROSPlan_ws/src/goalgeneration_as_planning/domains/parking/domain.pddl'
-    # problem_file = '/home/gerard/code/ROSPlan_ws/src/goalgeneration_as_planning/domains/parking/p26-15-1.pddl'
-    # domain_file = '/home/gerard/code/ROSPlan_ws/src/goalgeneration_as_planning/domains/rovers-time-simple-automatic/domain.pddl'
-    # problem_file = '/home/gerard/code/ROSPlan_ws/src/goalgeneration_as_planning/domains/rovers-time-simple-automatic/instance-20.pddl'
+    domain_file = os.path.dirname(__file__) + '/../testdomains/domain.pddl'
+    problem_file = os.path.dirname(__file__) + '/../testdomains/problem.pddl'
+    # domain_file = os.path.dirname(__file__) + '/../domains/parking/domain.pddl'
+    # problem_file = os.path.dirname(__file__) + '/../domains/parking/p26-15-1.pddl'
+    # domain_file = os.path.dirname(__file__) + '/../domains/rovers-time-simple-automatic/domain.pddl'
+    # problem_file = os.path.dirname(__file__) + '/../domains/rovers-time-simple-automatic/instance-20.pddl'
     generator = ILPGoalGenerator(domain_file, problem_file)
-    generator.load_cfg('/home/gerard/code/ROSPlan_ws/src/goalgeneration_as_planning/cfg/office_robot_benefits_wt.yaml')
-    # generator.load_cfg('/home/gerard/code/ROSPlan_ws/src/goalgeneration_as_planning/cfg/blank_benefit.yaml')
+    generator.load_cfg(os.path.dirname(__file__) + '/../cfg/office_robot_benefits_wt.yaml')
+    # generator.load_cfg(os.path.dirname(__file__) + '/../cfg/blank_benefit.yaml')
     #generator.set_state(['not_holding_object robot_assistant', 'robot_at robot_assistant wp0'])
     
     generator.make_ILP(solver_id="GLOP")
