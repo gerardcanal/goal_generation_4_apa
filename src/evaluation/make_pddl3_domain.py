@@ -10,6 +10,7 @@ import copy
 import re
 
 USE_BENEFIT = True
+PRECOMPUTED_BENEFIT = True
 USE_CONDITIONAL_TIMED_EFFECTS = False
 BENEFIT_FACTOR = -0.01
 TIME_FACTOR = 0.03
@@ -22,6 +23,7 @@ class MakePDDL3GRAP:
         self.all_goals = self.adg.get_grounded_predicates(self.adg.potential_goals)
         self.adg.load_cfg(cfg_path) 
         self.use_benefit = use_benefit
+        self.precomputed_benefit = PRECOMPUTED_BENEFIT
         self.benefit_factor = benefit_factor
         self.time_factor = time_factor
         self.violated_prefs_factor = violated_prefs_factor
@@ -31,6 +33,8 @@ class MakePDDL3GRAP:
         self.out_folder = out_folder
         self.postfix = postfix
         self.is_domain_durative = any([op.durative for op in self.adg.pddl_extractor.domain.operators.values()])
+        if self.precomputed_benefit:
+            self.grounded_potential_goals = self.adg.get_grounded_predicates(self.adg.potential_goals)
 
     def make_pddl3_problem(self):
         pddl_goal_metric = ('(:goal (and\n')
@@ -61,7 +65,10 @@ class MakePDDL3GRAP:
         problem = copy.deepcopy(self.adg.problem)
         self.adg._sf_mutex = []
         if self.use_benefit:
-            self.adg.add_init_state(problem, add_supertype_benefit=True)
+            if self.precomputed_benefit:
+                self.add_init_state_precomputed_benefit(problem)
+            else:
+                self.adg.add_init_state(problem, add_supertype_benefit=True)
 
         for inst, _type in problem.objects_type_map.items():
             if _type == 'object':
@@ -79,6 +86,13 @@ class MakePDDL3GRAP:
         with open(self.problem_file, 'w') as f:
             f.write(prob_str)
         
+    def add_init_state_precomputed_benefit(self, problem):
+        for goal in self.grounded_potential_goals:
+            gstr = str(goal)[1:-1].split(' ')
+            gbenefit = self.adg.get_grounded_goal_benefit(gstr, self.adg.get_last_goal_time(goal))
+            problem.add_assignment_from_str(gbenefit, f'benefit_{goal.name}', [tp.value for tp in goal.typed_parameters])
+        problem.add_assignment_from_str(0.0, "total_benefit")
+
     def add_violated_prefs_factor(self):
         return self.violated_prefs_factor > 0 and self.violated_prefs_factor < 1
 
@@ -99,30 +113,35 @@ class MakePDDL3GRAP:
         return domain
     
     def add_functions(self, d):
-        # Adapted from pddl_domain_generator.py
-        processed_types = []
-        for goal in self.potential_goals:
-            for tp in goal.typed_parameters:
-                if tp.type in processed_types:
-                    continue
-                d.add_function_from_str(f'benefit_{tp.type if tp.type != "object" else "obj"}', {'?' + tp.type[0]: tp.type if tp.type != 'object' else 'obj'})
-                processed_types.append(tp.type)
-        if self.adg.timing_windows or self.adg.timing_cyclics:
-            d.add_function_from_str('current_time')
-        for pred_name, _ in self.adg.timing_windows.items():
-                formula = self.adg.pddl_extractor.domain.predicates[pred_name]
+        if self.precomputed_benefit:
+            for goal in self.grounded_potential_goals:
+                params_map = {f'?{tp.type[0]}': tp.type if tp.type != 'object' else 'obj' for tp in goal.typed_parameters}
+                d.add_function_from_str('benefit_' + goal.name, params_map)
+        else:
+            # Adapted from pddl_domain_generator.py
+            processed_types = []
+            for goal in self.potential_goals:
+                for tp in goal.typed_parameters:
+                    if tp.type in processed_types:
+                        continue
+                    d.add_function_from_str(f'benefit_{tp.type if tp.type != "object" else "obj"}', {'?' + tp.type[0]: tp.type if tp.type != 'object' else 'obj'})
+                    processed_types.append(tp.type)
+            if self.adg.timing_windows or self.adg.timing_cyclics:
+                d.add_function_from_str('current_time')
+            for pred_name, _ in self.adg.timing_windows.items():
+                    formula = self.adg.pddl_extractor.domain.predicates[pred_name]
+                    params_map = {'?' + tp.type[0] + str(i): tp.type if tp.type != 'object' else 'obj' for i, tp in enumerate(formula.typed_parameters)}
+                    d.add_function_from_str(pred_name + '__window_start', params_map)
+                    d.add_function_from_str(pred_name + '__window_end', params_map)
+            for pred_name, _ in self.adg.timing_cyclics.items():
+                    formula = self.adg.pddl_extractor.domain.predicates[pred_name]
+                    params_map = {'?' + tp.type[0] + str(i): tp.type if tp.type != 'object' else 'obj' for i, tp in enumerate(formula.typed_parameters)}
+                    d.add_function_from_str(pred_name + '__interval', params_map)
+                    d.add_function_from_str(pred_name + '__last_time', params_map)
+            for goal, _ in self.adg.goal_benefits.items():
+                formula = self.adg.pddl_extractor.domain.predicates[goal]
                 params_map = {'?' + tp.type[0] + str(i): tp.type if tp.type != 'object' else 'obj' for i, tp in enumerate(formula.typed_parameters)}
-                d.add_function_from_str(pred_name + '__window_start', params_map)
-                d.add_function_from_str(pred_name + '__window_end', params_map)
-        for pred_name, _ in self.adg.timing_cyclics.items():
-                formula = self.adg.pddl_extractor.domain.predicates[pred_name]
-                params_map = {'?' + tp.type[0] + str(i): tp.type if tp.type != 'object' else 'obj' for i, tp in enumerate(formula.typed_parameters)}
-                d.add_function_from_str(pred_name + '__interval', params_map)
-                d.add_function_from_str(pred_name + '__last_time', params_map)
-        for goal, _ in self.adg.goal_benefits.items():
-            formula = self.adg.pddl_extractor.domain.predicates[goal]
-            params_map = {'?' + tp.type[0] + str(i): tp.type if tp.type != 'object' else 'obj' for i, tp in enumerate(formula.typed_parameters)}
-            d.add_function_from_str('benefit_' + goal, params_map)
+                d.add_function_from_str('benefit_' + goal, params_map)
         d.add_function_from_str('total_benefit')
         d.add_function_from_str('n_actions')
 
@@ -223,7 +242,8 @@ class MakePDDL3GRAP:
         domain.requirements.append(':fluents') 
 
         if self.use_benefit:
-            domain.requirements.append(':conditional-effects') 
+            if not self.precomputed_benefit:
+                domain.requirements.append(':conditional-effects') 
             
             self.potential_goals = self.adg.potential_goals
             self.add_functions(domain)
@@ -238,20 +258,28 @@ class MakePDDL3GRAP:
                             e = e.effect
                         if e.effect_type == EffectType.SIMPLE and g.name == e.formula.name:
                             print(f'Found {g.name} in {op_name} effect')
-                            if op_name in benefit_effects:
-                                _benefit = self.get_action_benefit(op, e.formula, {t.label: t.type for t in e.formula.typed_parameters})
-                                benefit_effects[op_name] = ExprComposite([add, *benefit_effects[op_name].tokens, *_benefit.tokens])
+                            if self.precomputed_benefit:
+                                exp = ExprBase(expr_type=ExprBase.ExprType.FUNCTION, function=AtomicFormula(f"benefit_{g.name}", e.formula.typed_parameters))
+                                if op_name in benefit_effects:
+                                    benefit_effects[op_name] = ExprComposite([add, *benefit_effects[op_name].tokens, exp])
+                                else:
+                                    benefit_effects[op_name] = ExprComposite([exp])
                             else:
-                                benefit_effects[op_name] = self.get_action_benefit(op, e.formula, {t.label: t.type for t in e.formula.typed_parameters})
-                            if e.formula.name in self.adg.timing_windows:
-                                self.add_window_effects(op, e.formula.name, e.formula.typed_parameters)
-                            if e.formula.name in self.adg.timing_cyclics:
-                                self.add_cyclic_effect(op, e.formula.name, e.formula.typed_parameters)
+                                if op_name in benefit_effects:
+                                    _benefit = self.get_action_benefit(op, e.formula, {t.label: t.type for t in e.formula.typed_parameters})
+                                    benefit_effects[op_name] = ExprComposite([add, *benefit_effects[op_name].tokens, *_benefit.tokens])
+                                else:
+                                    benefit_effects[op_name] = self.get_action_benefit(op, e.formula, {t.label: t.type for t in e.formula.typed_parameters})
+                                if e.formula.name in self.adg.timing_windows:
+                                    self.add_window_effects(op, e.formula.name, e.formula.typed_parameters)
+                                if e.formula.name in self.adg.timing_cyclics:
+                                    self.add_cyclic_effect(op, e.formula.name, e.formula.typed_parameters)
 
             total_benefit = AtomicFormula.from_string('total_benefit')
             for op_name, ben in benefit_effects.items():
                 op = domain.operators[op_name]
-                self.adg.add_complex_assign_effect(total_benefit, ben, op, assign_type=AssignmentType.INCREASE, time_spec=TimeSpec.AT_END)
+                #self.adg.add_complex_assign_effect(total_benefit, ben, op, assign_type=AssignmentType.INCREASE, time_spec=TimeSpec.AT_END)
+                self.adg.add_complex_assign_effect(total_benefit, ben, op, assign_type=AssignmentType.INCREASE, time_spec=TimeSpec.AT_START)
 
         self.domain_file = self.adg.pddl_extractor.domain_file.replace('.pddl', '_with-prefs.pddl')
         if self.out_folder:
@@ -276,8 +304,9 @@ if __name__ == '__main__':
     #problem = '/tmp/transport_instance-1.pddl'
     #problem = sys.argv[2]
     #problem = '/home/gerard/code/ROSPlan_ws/src/goalgeneration_as_planning/testdomains/problem.pddl'
-    domain = '/home/gerard/code/ROSPlan_ws/src/goalgeneration_as_planning/domains/rovers-time-simple-automatic/domain.pddl'
-    problem = '/home/gerard/code/ROSPlan_ws/src/goalgeneration_as_planning/domains/rovers-time-simple-automatic/instance-20.pddl'
+    import os
+    domain = os.path.dirname(__file__) + '/../../domains/rovers-time-simple-automatic/domain.pddl'
+    problem = os.path.dirname(__file__) + '/../../domains/rovers-time-simple-automatic/instance-20.pddl'
     
     if len(sys.argv) > 1:
         domain = sys.argv[1]
@@ -286,6 +315,8 @@ if __name__ == '__main__':
         cfg = sys.argv[3]
     else:
         cfg = '/home/gerard/code/ROSPlan_ws/src/goalgeneration_as_planning/cfg/blank_benefit.yaml'
+        cfg = '/mnt/Data/grap_results/rovers_results/L2_n50_lb5_ub5/cfg.yaml'
+        cfg = '/media/gerard/Elements/backups/arbok/Data/grap_results/rovers_results/L2_n50_lb5_ub5/cfg.yaml'
 
     domain_maker = MakePDDL3GRAP(domain, problem, cfg_path=cfg)
     domain_maker.make_pddl3_domain()

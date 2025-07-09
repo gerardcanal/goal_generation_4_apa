@@ -13,7 +13,7 @@ USE_BENEFIT = True
 USE_CONDITIONAL_TIMED_EFFECTS = True
 BENEFIT_FACTOR = -1 #-0.01
 TIME_FACTOR = 0.005 # 0.03
-VIOLATED_PREFS_FACTOR = 0 #0.5
+VIOLATED_PREFS_FACTOR = 0.5
 PLANNER_EXEC = "/home/gerard/Nextcloud/optic-clp/tuned_tautologous/optic-cplex"
 PLANNER_EXEC = "/home/gerard/Nextcloud/optic-clp/optic-cplex"
 PLANNER_EXEC = "/home/gerard/Nextcloud/optic-clp/contradictory_tuned/optic-cplex"
@@ -47,10 +47,9 @@ class PDDL3GRAPEVAL:
         self.csv_line['max_pos_benefit'] = self.pddl3.adg.max_gainable_benefit[1]
         planning_start_time = time.time()
         cmd = f'timeout {self.planner_timeout} ' + self.planner_exec + ' -n ' + self.domain_file + ' ' + self.problem_file + ' | grep -v \\(G\\)'
-        print(cmd)
         if CHECK_OUTPUT:
             cmd += ' | tee /tmp/planner_output.txt'
-        #print(cmd)
+        print(cmd)
         print('Running planner for ' + str(self.planner_timeout) + ' seconds...')
         try:
             output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode('utf-8')  # also stderr=subprocess.DEVNULL
@@ -266,9 +265,9 @@ class PDDL3GRAPEVAL:
 
 def check_args():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("-d", '--domain', type=str,  help="Domain to be evaluated", default='/home/gerard/code/ROSPlan_ws/src/goalgeneration_as_planning/domains/rovers-time-simple-automatic/domain.pddl')
-    parser.add_argument("-p", '--problem', type=str,  help="Problem to be evaluated", default='/home/gerard/code/ROSPlan_ws/src/goalgeneration_as_planning/domains/rovers-time-simple-automatic/instance-20.pddl')
-    parser.add_argument("-g", '--cfg_path', type=str,  help="Config YAML file with benefits", default='/mnt/Data/grap_results/rovers_results/L2_n50_lb5_ub5/cfg.yaml')
+    parser.add_argument("-d", '--domain', type=str,  help="Domain to be evaluated", default='/home/gerard/code/ROSPlan_ws/src/goalgeneration_as_planning/domains/office_robot/domain.pddl')
+    parser.add_argument("-p", '--problem', type=str,  help="Problem to be evaluated", default='/home/gerard/code/ROSPlan_ws/src/goalgeneration_as_planning/domains/office_robot/problem.pddl')
+    parser.add_argument("-g", '--cfg_path', type=str,  help="Config YAML file with benefits", default='/mnt/Data/grap_results/office_robot_hard_results/L2_n50_lb5_ub5/cfg.yaml')
 
     parser.add_argument("-o", '--output', type=str,  help="Output csv file", default='/tmp/pddl3_test.csv')
 
