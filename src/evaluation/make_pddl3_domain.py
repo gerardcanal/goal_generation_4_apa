@@ -115,7 +115,7 @@ class MakePDDL3GRAP:
     def add_functions(self, d):
         if self.precomputed_benefit:
             for goal in self.grounded_potential_goals:
-                params_map = {f'?{tp.type[0]}': tp.type if tp.type != 'object' else 'obj' for tp in goal.typed_parameters}
+                params_map = {f'?{tp.type[0]}{i}': tp.type if tp.type != 'object' else 'obj' for i, tp in enumerate(goal.typed_parameters)}
                 d.add_function_from_str('benefit_' + goal.name, params_map)
         else:
             # Adapted from pddl_domain_generator.py
