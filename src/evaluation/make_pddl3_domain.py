@@ -1,4 +1,4 @@
-#!/usr/bin/python3.9
+#!/usr/bin/env python
 import sys; import os; sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))  # Hack to add src to path
 
 from pddl_goal_domain_generator import PDDLDomainGenerator

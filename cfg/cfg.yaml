@@ -1,0 +1,235 @@
+current_time: 21.47
+n_goals: 50
+instance_benefit:
+  wp46: 5.0
+  wp26: 5.0
+  wp53: 5.0
+  wp21: 5.0
+  wp55: 5.0
+  wp33: 5.0
+  wp2: 5.0
+  wp57: 5.0
+  wp12: 5.0
+  wp28: 5.0
+  post2: 5.0
+  wp43: 5.0
+  wp6: 5.0
+  wp40: 5.0
+  wp14: 5.0
+goal_benefit:
+  object_at:
+    mug, wp10: 5.0
+    post1, wp30: 5.0
+    post2, wp41: 5.0
+    post1, wp52: 5.0
+    post2, wp6: 5.0
+    post2, wp24: 5.0
+    post1, wp16: 5.0
+    paper, wp12: 5.0
+    mug, wp0: 5.0
+  not_occupied:
+    wp34: 5.0
+    wp23: 5.0
+    wp6: 5.0
+  robot_at:
+    robot_assistant, wp50: 5.0
+    robot_assistant, wp25: 5.0
+    robot_assistant, wp49: 5.0
+timing_windows:
+  robot_at:
+    robot_assistant, wp22:
+    - 20.7
+    - 23.66
+    robot_broken, wp51:
+    - 20.44
+    - 24.1
+    robot_broken, wp45:
+    - 19.23
+    - 23.25
+    robot_broken, wp1:
+    - 19.56
+    - 22.35
+    robot_broken, wp32:
+    - 20.43
+    - 22.8
+    robot_broken, wp19:
+    - 19.64
+    - 21.69
+    robot_assistant, wp45:
+    - 20.78
+    - 24.41
+    robot_assistant, wp19:
+    - 20.11
+    - 20.74
+    robot_assistant, wp13:
+    - 22.83
+    - 23.14
+    robot_broken, wp26:
+    - 6.14
+    - 6.95
+  object_at:
+    paper, robot_broken:
+    - 21.31
+    - 22.29
+    post2, wp29:
+    - 21.11
+    - 22.98
+    mug, wp33:
+    - 19.51
+    - 22.73
+    paper, wp36:
+    - 19.56
+    - 22.1
+    post2, person3:
+    - 20.02
+    - 21.84
+    mug, wp42:
+    - 19.34
+    - 23.61
+    mug, wp29:
+    - 20.88
+    - 22.09
+    post1, wp55:
+    - 5.55
+    - 19.26
+    paper, wp46:
+    - 1.39
+    - 6.91
+    post2, wp31:
+    - 15.12
+    - 15.44
+    post2, wp9:
+    - 12.92
+    - 14.9
+    paper, person2:
+    - 19.27
+    - 19.86
+    post1, wp46:
+    - 2.26
+    - 19.56
+  not_occupied:
+    wp22:
+    - 18.52
+    - 22.01
+    wp47:
+    - 20.15
+    - 20.5
+    wp57:
+    - 2.57
+    - 12.4
+    wp23:
+    - 4.47
+    - 18.91
+  visited:
+    wp23:
+    - 20.2
+    - 21.14
+    wp4:
+    - 11.96
+    - 15.58
+    wp41:
+    - 22.02
+    - 23.03
+timing_cycles:
+  robot_at:
+    robot_broken, wp56: 11.17
+    robot_broken, wp10: 1.32
+    robot_assistant, wp10: 6.6
+    robot_broken, wp48: 11.01
+    robot_assistant, wp54: 0.63
+    robot_assistant, wp56: 7.58
+    robot_broken, wp53: 9.08
+    robot_broken, wp33: 9.08
+    robot_broken, wp3: 9.28
+    robot_broken, wp41: 8.63
+    robot_assistant, wp1: 1.52
+    robot_assistant, wp14: 7.24
+  not_occupied:
+    wp7: 9.38
+    wp33: 1.36
+    wp45: 5.15
+    wp37: 0.61
+    wp14: 7.98
+  visited:
+    wp28: 11.36
+    wp22: 3.17
+    wp36: 1.15
+    wp32: 10.08
+    wp52: 2.15
+  object_at:
+    post2, wp8: 12.0
+    paper, wp33: 9.25
+    post2, wp54: 5.97
+    post1, wp44: 9.97
+    post1, wp5: 5.11
+    post1, wp38: 2.6
+    post2, robot_assistant: 6.75
+    post1, wp15: 8.38
+    paper, wp13: 6.84
+    post2, robot_broken: 2.25
+    post1, wp28: 11.9
+    post2, wp20: 10.45
+    paper, wp56: 2.01
+    paper, wp24: 6.44
+    post2, wp21: 9.99
+    mug, person3: 3.9
+    mug, wp51: 1.34
+    paper, wp28: 11.02
+    post2, wp35: 10.32
+    mug, wp17: 3.19
+    paper, wp30: 7.65
+    mug, wp52: 1.66
+    mug, wp55: 7.86
+last_goal_times:
+  robot_at:
+    robot_broken, wp56: 10.3
+    robot_broken, wp10: 20.15
+    robot_assistant, wp10: 14.87
+    robot_broken, wp48: 10.46
+    robot_assistant, wp54: 20.84
+    robot_assistant, wp56: 13.89
+    robot_broken, wp53: 12.51
+    robot_broken, wp33: 13.74
+    robot_broken, wp3: 17.03
+    robot_broken, wp41: 14.59
+    robot_assistant, wp1: 13.43
+    robot_assistant, wp14: 8.22
+  not_occupied:
+    wp7: 12.09
+    wp33: 20.11
+    wp45: 19.41
+    wp37: 17.02
+    wp14: 4.91
+  visited:
+    wp28: 10.11
+    wp22: 19.61
+    wp36: 21.47
+    wp32: 20.36
+    wp52: 11.83
+  object_at:
+    post2, wp8: 9.47
+    paper, wp33: 12.22
+    post2, wp54: 15.5
+    post1, wp44: 11.5
+    post1, wp5: 16.36
+    post1, wp38: 18.87
+    post2, robot_assistant: 21.28
+    post1, wp15: 15.04
+    paper, wp13: 15.68
+    post2, robot_broken: 21.18
+    post1, wp28: 14.26
+    post2, wp20: 17.64
+    paper, wp56: 19.77
+    paper, wp24: 8.15
+    post2, wp21: 7.33
+    mug, person3: 9.53
+    mug, wp51: 12.58
+    paper, wp28: 4.66
+    post2, wp35: 3.5
+    mug, wp17: 15.51
+    paper, wp30: 6.46
+    mug, wp52: 17.82
+    mug, wp55: 6.67
+max_benefit:
+- 55633.0
+- 61322.5

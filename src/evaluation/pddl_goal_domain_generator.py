@@ -662,15 +662,10 @@ class PDDLDomainGenerator(AbstractGoalGenerator):
 
 if __name__ == '__main__':
     pddl_path = '/tmp/GoalGeneratorDomain.pddl'
-    domain_file = '/home/gerard/code/ROSPlan_ws/src/goalgeneration_as_planning/testdomains/domain.pddl'
-    problem_file = '/home/gerard/code/ROSPlan_ws/src/goalgeneration_as_planning/testdomains/problem.pddl'
-    # domain_file = '/home/gerard/code/ROSPlan_ws/src/goalgeneration_as_planning/domains/parking/domain.pddl'
-    # problem_file = '/home/gerard/code/ROSPlan_ws/src/goalgeneration_as_planning/domains/parking/p26-15-1.pddl'
-    # domain_file = '/home/gerard/code/ROSPlan_ws/src/goalgeneration_as_planning/domains/rovers-time-simple-automatic/domain.pddl'
-    # problem_file = '/home/gerard/code/ROSPlan_ws/src/goalgeneration_as_planning/domains/rovers-time-simple-automatic/instance-20.pddl'
+    domain_file = 'domain.pddl'
+    problem_file = 'problem.pddl'
     generator = PDDLDomainGenerator(domain_file, problem_file)
-    generator.load_cfg('/home/gerard/code/ROSPlan_ws/src/goalgeneration_as_planning/cfg/office_robot_benefits.yaml')
-    # generator.load_cfg('/home/gerard/code/ROSPlan_ws/src/goalgeneration_as_planning/cfg/blank_benefit.yaml')
+    generator.load_cfg('cfg/office_robot_benefits.yaml')
     #generator.set_state(['not_holding_object robot_assistant', 'robot_at robot_assistant wp0'])
     d = generator.generate_domain(pddl_path)
     pddl_path = '/tmp/GoalGeneratorProblem.pddl'

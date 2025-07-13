@@ -36,8 +36,9 @@ class GoalGenerationPipeline:
         start_time = time.time()
         self.goal_generator.make_ILP(solver_id=self.solver_id)
         goals, solver_benefit, solver_time = self.goal_generator.solve()
+        goals.sort(key=lambda x: x[1], reverse=True)
         # Goals is a list of tuples (goal, benefit)
-        return goals, round(solver_benefit, decimal), round(solver_time, decimal), round(time.time() - start_time, decimal+1)
+        return goals, round(solver_benefit, decimal), round(solver_time*0.001, decimal), round(time.time() - start_time, decimal+1)
 
     def goal_generation_pipeline(self):
         goals, solver_benefit, solver_time, total_time = self.generate_goals()
@@ -46,20 +47,28 @@ class GoalGenerationPipeline:
             return
 
         last_times_map = self.get_last_time_map(goals)
-        goals.sort(key=lambda x: x[1], reverse=True)
         print('Sorted goals:')
         total_benefit = self.compute_benefit_goal_list(goals, last_times_map, True)
         print('\tTotal benefit:', total_benefit, '(Solver benefit:', str(solver_benefit) +'). Solver time: ' + str(solver_time) + ' milliseconds, total time: ' + str(total_time) + ' seconds)')
         assert abs(total_benefit-solver_benefit) < 0.15, 'Solver benefit is different to the planner\'s benefit!'
 
+        self.solve_goals_pipeline(goals, last_times_map)
+
+    def solve_goals_pipeline(self, goals, last_times_map):
+        ''' Solve the goals using the planner, removing goals if no plan is found until a plan is found or all goals are removed. 
+        
+        Returns True if a plan was found, False if no plan was found after removing all goals.
+        Also returns the number of trials and the number of unsolvable plans found.
+        '''
         plan = self.run_planner(goals)
-        if plan:
-            planning_time = float(plan[0])  # Time taken by the planner to find the
+        if not isinstance(plan, str): # If plan is a string, it means the planner failed with NO_PLAN, UNSOLVABLE or PLANNER_ERROR
+            planning_time = float(plan[0][0])  # Time taken by the planner to find the
             print('Goal Generation completed. Plan to goals was found in ' + str(planning_time) + ' seconds.')
-            return True
+            return True, plan[0], goals, 0, 0, plan[1] # Return last plan, and first one
         else:
             original_goals = copy.deepcopy(goals)
-            n_trials = 0
+            n_replans = 0
+            n_unsolvable_plans = 0
             while goals:
                 # Remove last X% of goals
                 n_to_remove = int(round(len(goals)*(self.remove_percent/100.0)+0.00001))  # delta added to round up if it falls in 0.5
@@ -73,24 +82,29 @@ class GoalGenerationPipeline:
                         print(f'Removing a {self.remove_percent}% of the goals ({n_to_remove} goals) at random, trying to plan with {len(goals)} goals...')
                     else:
                         eprint('Unknown removal strategy ' + self.removal_strategy)
-                        return False
+                        return False, plan, [], n_replans, n_unsolvable_plans
                     
-                    n_trials += 1
-
                     print('Goals after removal:')
                     total_benefit = self.compute_benefit_goal_list(goals, last_times_map, True)
                     print('\tTotal benefit:', total_benefit)
                 
                     plan = self.run_planner(goals)
-               
-                if n_to_remove == 0 and not plan:
+                    if plan == "PLANNER_ERROR":
+                        eprint('Planner failed with a Segmentation Fault.')
+                        #return False, plan, [], n_replans, n_unsolvable_plans
+                    elif plan == "UNSOLVABLE":
+                        n_unsolvable_plans += 1
+
+                    n_replans += 1
+
+                if n_to_remove == 0 and (plan == "UNSOLVABLE" or plan == "NO_PLAN"):
                     goals = []  # We couldn't solve any goal!
                     print('############### All goals were removed! Problem is unsolvable.')
-                    return False
+                    return False, plan, goals, n_replans, n_unsolvable_plans
 
-                if plan:
-                    print(f'Goal Generation completed after {n_trials} trials with {len(goals)} goals out of the original {len(original_goals)} and a total benefit of {total_benefit}.')
-                    return True
+                if not isinstance(plan, str): # If plan is a string, it means the planner failed with NO_PLAN, UNSOLVABLE or PLANNER_ERROR
+                    print(f'Goal Generation completed after {n_replans} trials with {len(goals)} goals out of the original {len(original_goals)} and a total benefit of {total_benefit}.')
+                    return True, plan, goals, n_replans, n_unsolvable_plans
 
     def run_planner(self, goals, planner=PLANNER): # popf or rewrite-no-lp
         # Generate the domain and problem files for the planner with the new goals
@@ -104,15 +118,15 @@ class GoalGenerationPipeline:
         if planner == "POPF":
             cmd = f'timeout {self.planner_timeout} {os.path.dirname(__file__)}/../bin/popf -n '+ \
                 f'{self.goal_generator.agg.pddl_extractor.domain_file} {goals_problem_path}' + \
-                f' | tee -a /tmp/goal_generation/{self.uuid}_gg_planner_output.txt' # TODO change tee path to avoid clashes?
+                f' | tee -a /tmp/goal_generation/{self.uuid}_gg_planner_output.txt'
         elif planner == "OPTIC":
             cmd = f'timeout {self.planner_timeout} {os.path.dirname(__file__)}/../bin/optic-clp -n '+ \
                   f'{self.goal_generator.agg.pddl_extractor.domain_file} {goals_problem_path}' + \
-                  f' | tee -a /tmp/goal_generation/{self.uuid}_gg_planner_output.txt' # TODO change tee path to avoid clashes?
+                  f' | tee -a /tmp/goal_generation/{self.uuid}_gg_planner_output.txt'
         else:
             cmd = f'timeout {self.planner_timeout} {os.path.dirname(__file__)}/../bin/optic ' + \
                    f'{self.goal_generator.agg.pddl_extractor.domain_file} {goals_problem_path}' + \
-                   f' | tee -a /tmp/goal_generation/{self.uuid}_gg_planner_output.txt' # TODO change tee path to avoid clashes?
+                   f' | tee -a /tmp/goal_generation/{self.uuid}_gg_planner_output.txt'
             # '--optimise --use-rpg Distance --pseudo-ehc '
         print(cmd)
         print(f'Running planner to solve generated goals for {self.planner_timeout} seconds...')
@@ -122,19 +136,33 @@ class GoalGenerationPipeline:
             if e.returncode != 124:  # 124 is timeout's return code when killed successfully
                 eprint('Planner failed with error code ' + str(e.returncode))
             output = e.output.decode('utf-8')
+
+        if re.search('Segmentation Fault', output, re.IGNORECASE):
+            eprint('ERROR: Planner failed with a Segmentation Fault.')
+            return "PLANNER_ERROR"
+
         if planner == "POPF" or planner == "OPTIC":
             plan_re = re.compile(r';.+with metric (\d+.?\d+)$\s+(?:\s*;.*$\n)+; Time (\d+.?\d+)\n((?:.*\(.*\).*$\n)+)', re.MULTILINE)  # Metric, time, plan POPF!
         else:
             #plan_re = re.compile(r';+ Solution.+$(?:\s*;.*$\n)+; Metric value (.+)$\n((?:.*\(.*\).*$\n)+)', re.MULTILINE) # Metric and plan only
             plan_re = re.compile(r';+ Solution.+$\s+; Time (\d+.?\d+)(?:\s*;.*$\n)+; Metric value (.+)$\n((?:.*\(.*\).*$\n)+)', re.MULTILINE) # Time, metric, plan
+        
         plan_match = plan_re.findall(output)  # This has all the plans with its metric. Best one is the last one (plan_match[-1])
+        
         if plan_match:
             if planner == "POPF" or planner == "OPTIC":
                 plan_match[-1] = [plan_match[-1][1], plan_match[-1][0], plan_match[-1][2]]  # [time, metric, plan]
+                if len(plan_match) > 1:
+                    plan_match[0] = [plan_match[0][1], plan_match[0][0], plan_match[0][2]]  # [time, metric, plan]
             print(f'Plan found with metric value {plan_match[-1][1]} after {plan_match[-1][0]} seconds.')
-            return plan_match[-1]  # Return the last found plan as [time, metric, plan]
+            return plan_match[-1], plan_match[0]  # Return the last found plan as [time, metric, plan] and the first one
+        
+        if re.search('unsolvable', output, re.IGNORECASE):
+            eprint('Plan was unsolvable.')
+            return "UNSOLVABLE"
+
         eprint('No plan found')
-        return None
+        return "NO_PLAN"
 
     def compute_benefit_goal_list(self, goals, last_times_map, print_goals=False, decimals=3):
         total_benefit = 0
@@ -157,28 +185,27 @@ class GoalGenerationPipeline:
                 last_time_map[str(goal[0])] = self.goal_generator.agg.current_time  # If no last time is found, use the current time
         return last_time_map
 
-def check_args():
+def parse_args(eval=False):
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("-d", '--domain', type=str,  help="Domain to be evaluated", default=os.path.dirname(__file__) + '/../testdomains/domain.pddl')
-    parser.add_argument("-p", '--problem', type=str,  help="Problem to be evaluated", default=os.path.dirname(__file__) + '/../testdomains/problem.pddl')
-    parser.add_argument("-g", '--cfg_path', type=str,  help="Config YAML file with benefits", default=os.path.dirname(__file__) + '/../cfg/cfg.yaml')
+    parser.add_argument("-d", '--domain', type=str,  help="Domain to be evaluated", default=os.path.dirname(__file__) + '/../domains/office_robot/domain.pddl')
+    parser.add_argument("-p", '--problem', type=str,  help="Problem to be evaluated", default=os.path.dirname(__file__) + '/../domains/office_robot/problem.pddl')
+    parser.add_argument("-g", '--cfg_path', type=str,  help="Config YAML file with benefits", default=os.path.dirname(__file__) + '/../cfg/office_robot_benefits_wt.yaml')
+    #parser.add_argument("-g", '--cfg_path', type=str,  help="Config YAML file with benefits", default='/mnt/Data/grap_results/rovers_results/L2_n60_lb5_ub5/cfg.yaml')
     
     parser.add_argument("-s", '--solver_id', type=str,  help="Solver ID", default="GLOP")  # GLOP, CLP, CPLEX, CPSAT
     parser.add_argument("-u", '--uuid', type=str,  help="UUID for this run", default=uuid.uuid4().hex)
-
-    #parser.add_argument("-o", '--output', type=str,  help="Output csv file", default='/tmp/pddl3_test.csv')
 
     parser.add_argument("-t", '--planner_timeout', type=float,  help="Planner timeout", default=30)
     parser.add_argument("-r", '--remove_percent', type=int,  help="Percentage of goals to remove if no plan is found", default=15)
     parser.add_argument("-m", '--removal_strategy', type=str,  help="Removal strategy for goals if no plan is found", default="worst_n", choices=["worst_n", "random"])
 
-    #parser.add_argument("-e", '--planner_exec', type=str,  help="Planner executable path", default=PLANNER_EXEC)
+    if eval:
+        parser.add_argument("-csv", '--csv_path', type=str, help="Output CSV file for results", default='/tmp/goal_generation_evaluation.csv')
     
     args = parser.parse_args()
     return args
 
 if __name__ == '__main__':
-   args = check_args()
-   #print(args)
+   args = parse_args()
    gpp = GoalGenerationPipeline(args)
    gpp.goal_generation_pipeline()

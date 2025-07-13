@@ -48,17 +48,18 @@ class ILPGoalGenerator:
         #infinity = self.solver.infinity()
         g = []
         b = []
-        for i, pg in enumerate(self.potential_goals):        # TODO iterate over the potential goals
-            g.append(self.solver.BoolVar(f"g{i} - {pg}"))  # Boolean variable for goal satisfaction TODO - name of full predicate?
+        for i, pg in enumerate(self.potential_goals):
+            g.append(self.solver.BoolVar(f"g{i} - {pg}"))  # Boolean variable for goal satisfaction 
             goal2idx[str(pg)] = i
-            #b[i] = self.solver.IntVar(0.0, infinity, f'b{i} - {pg}') # Benefit variable for goal i TODO - this should be precalculated and fed into the constraints
-            b.append(self.agg.get_grounded_goal_benefit(str(pg)[1:-1].split(), self.agg.get_last_goal_time(pg)))  # Get the benefit of the goal, if it exists
+            #b[i] = self.solver.IntVar(0.0, infinity, f'b{i} - {pg}') # Benefit variable for goal i
+            b.append(self.agg.get_grounded_goal_benefit(str(pg)[1:-1].split(), self.agg.get_last_goal_time(pg)))  # Get the benefit of the goal
         print("Number of variables =", self.solver.NumVariables())
 
         # Add constraints
         # C1 : sum_i{g_i} <= N
         n_goals = self.agg.n_goals if self.agg.n_goals > 0 else len(self.potential_goals)  # If n_goals is not set, use the number of potential goals
         self.solver.Add(sum([g[i] for i in range(len(g))]) <= n_goals)
+        #self.solver.Add(sum([g[i] for i in range(len(g))]) == n_goals)
 
         # C2 : g_i + g_j <= 1 for all mutex pairs (i,j)
         for instance, mutex_group in self.agg.mutex_groups:
@@ -97,16 +98,18 @@ class ILPGoalGenerator:
                 eprint("The problem has a feasible solution, but it is not optimal. Check output!")
             goals = []
             print("Objective value =", self.solver.Objective().Value())
+            print("Selected goals:")
             for i in range(len(self.potential_goals)):
                 #print(g[i].name(), " = ", g[i].solution_value())
                 if (self.g[i].solution_value()):
                     assert str(self.potential_goals[i]) in self.g[i].name(), f"Error: Goal variable {i} name {self.g[i].name()} does not match potential goal {self.potential_goals[i]}"
-                    self.dprint(f"Goal {i}: {self.potential_goals[i]} is selected with benefit {self.b[i]}.")
+                    self.dprint(f"  Goal {i}: {self.potential_goals[i]} is selected with benefit {self.b[i]}.")
                     goals.append((self.potential_goals[i], self.b[i]))  # Remove parentheses and split into list
             print()
             print(f"Problem solved in {self.solver.wall_time():d} milliseconds")
             print(f"Problem solved in {self.solver.iterations():d} iterations")
             print(f"Problem solved in {self.solver.nodes():d} branch-and-bound nodes")
+            print(f'Generated {len(goals)} goals')
             return goals, self.solver.Objective().Value(), self.solver.wall_time()
         else:
             eprint("The problem does not have an optimal nor feasible solution.")
@@ -119,13 +122,14 @@ class ILPGoalGenerator:
 if __name__ == '__main__':
     domain_file = os.path.dirname(__file__) + '/../testdomains/domain.pddl'
     problem_file = os.path.dirname(__file__) + '/../testdomains/problem.pddl'
-    # domain_file = os.path.dirname(__file__) + '/../domains/parking/domain.pddl'
-    # problem_file = os.path.dirname(__file__) + '/../domains/parking/p26-15-1.pddl'
+    domain_file = os.path.dirname(__file__) + '/../domains/parking/domain.pddl'
+    problem_file = os.path.dirname(__file__) + '/../domains/parking/p26-15-1.pddl'
     # domain_file = os.path.dirname(__file__) + '/../domains/rovers-time-simple-automatic/domain.pddl'
     # problem_file = os.path.dirname(__file__) + '/../domains/rovers-time-simple-automatic/instance-20.pddl'
     generator = ILPGoalGenerator(domain_file, problem_file)
-    generator.load_cfg(os.path.dirname(__file__) + '/../cfg/office_robot_benefits_wt.yaml')
-    # generator.load_cfg(os.path.dirname(__file__) + '/../cfg/blank_benefit.yaml')
+    #generator.load_cfg(os.path.dirname(__file__) + '/../cfg/cfg.yaml')
+    #generator.load_cfg(os.path.dirname(__file__) + '/../cfg/blank_benefit.yaml')
+    generator.load_cfg('/mnt/Data/grap_results/parking_results/L2_n60_lb5_ub5/cfg.yaml')
     #generator.set_state(['not_holding_object robot_assistant', 'robot_at robot_assistant wp0'])
     
     generator.make_ILP(solver_id="GLOP")

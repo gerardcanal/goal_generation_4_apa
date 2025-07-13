@@ -1,19 +1,19 @@
 #!/usr/bin/env python
 import re
-import sys
 import argparse
 import subprocess
 import time
 import os.path
 import numpy as np
 from make_pddl3_domain import MakePDDL3GRAP
-from PlanUtils import PlanUtils
+from evaluation.plan_utils import PlanUtils
+from eval_utils import EvalUtils
 
 USE_BENEFIT = True
 USE_CONDITIONAL_TIMED_EFFECTS = True
 BENEFIT_FACTOR = -1 #-0.01
-TIME_FACTOR = 0.005 # 0.03
-VIOLATED_PREFS_FACTOR = 0.5
+TIME_FACTOR = 0.3 # 0.03
+VIOLATED_PREFS_FACTOR = 1
 PLANNER_EXEC = "/home/gerard/Nextcloud/optic-clp/tuned_tautologous/optic-cplex"
 PLANNER_EXEC = "/home/gerard/Nextcloud/optic-clp/optic-cplex"
 PLANNER_EXEC = "/home/gerard/Nextcloud/optic-clp/contradictory_tuned/optic-cplex"
@@ -25,9 +25,11 @@ class PDDL3GRAPEVAL:
 
     def __init__(self, domain, problem, cfg_path, csv_file, planner_exec=PLANNER_EXEC, planner_timeout=PLANNER_TIMEOUT,
                  use_benefit=USE_BENEFIT, use_conditionals=USE_CONDITIONAL_TIMED_EFFECTS, benefit_factor=BENEFIT_FACTOR, time_factor=TIME_FACTOR, 
-                 violated_prefs_factor=VIOLATED_PREFS_FACTOR):
+                 violated_prefs_factor=VIOLATED_PREFS_FACTOR, args=None):
         self.csv_line = {}
         self.start_time = time.time()
+        self.csv_file = open(csv_file, 'a')
+        self.args = args
         self.pddl3 = MakePDDL3GRAP(domain, problem, cfg_path, use_benefit, use_conditionals, benefit_factor, time_factor, violated_prefs_factor, out_folder=args.output_domains, postfix=args.postfix)
         self.pddl3.make_pddl3_domain()
         self.pddl3.make_pddl3_problem()
@@ -37,14 +39,13 @@ class PDDL3GRAPEVAL:
         self.planner_exec = planner_exec
         self.planner_timeout = planner_timeout
         should_write_header = not os.path.exists(csv_file)
-        self.csv_file = open(csv_file, 'a')
         print('Opened CSV file ' + self.csv_file.name + ' for writing')
         self.csv_header(should_write_header)
 
     def run_planner(self):
         # Runs the planner and returns the plan
         self.csv_line['max_benefit'] = self.pddl3.adg.max_gainable_benefit[0]
-        self.csv_line['max_pos_benefit'] = self.pddl3.adg.max_gainable_benefit[1]
+        self.csv_line['max_positive_benefit'] = self.pddl3.adg.max_gainable_benefit[1]
         planning_start_time = time.time()
         cmd = f'timeout {self.planner_timeout} ' + self.planner_exec + ' -n ' + self.domain_file + ' ' + self.problem_file + ' | grep -v \\(G\\)'
         if CHECK_OUTPUT:
@@ -115,7 +116,7 @@ class PDDL3GRAPEVAL:
                            'final_n_goals_benefit',
                            'plan_length', 'plan_makespan', 'plan_metric',
                            'initial_state_benefit', 'final_minus_initial_benefit',
-                           'max_benefit', 'max_pos_benefit', 'final_benefit'
+                           'max_benefit', 'max_positive_benefit', 'final_benefit'
                           ]
         if write_header:
             self.csv_file.write(','.join(self.csv_fields) + '\n') # Write header
@@ -161,59 +162,6 @@ class PDDL3GRAPEVAL:
             total_benefit += b
         return total_benefit
 
-    def count_goals_in_windows(self, goals, last_times_map, prefix='final'):
-        if prefix and prefix[-1] != '_': prefix += '_'
-        self.csv_line[prefix + 'n_goals_in_window'] = 0
-        self.csv_line[prefix + 'n_goals_after_window'] = 0
-        self.csv_line[prefix + 'n_goals_before_window'] = 0
-        self.csv_line[prefix + 'n_goals_in_cycle'] = 0
-        self.csv_line[prefix + 'n_goals_over_cycle'] = 0
-        self.csv_line[prefix + 'n_goals_before_cycle'] = 0
-        self.csv_line[prefix + 'n_goals_benefit'] = 0  # Goals which have explicit benefit
-        for grounded_goal in goals:
-            goal_name = grounded_goal.name
-            if '__' in goal_name:
-                goal_name = goal_name[:goal_name.find('__')]
-            goal_params = [t.value for t in grounded_goal.typed_parameters]
-            params_str = ', '.join(goal_params)
-
-            if goal_name in self.pddl3.adg.goal_benefits and params_str in self.pddl3.adg.goal_benefits[goal_name]:
-                self.csv_line[prefix + 'n_goals_benefit'] += 1
-
-            # Windows
-            if goal_name in self.pddl3.adg.timing_windows:
-                twindows = self.pddl3.adg.timing_windows[goal_name]
-                if params_str in twindows:
-                    window = twindows[params_str]
-                    if self.pddl3.adg.current_time < window[0]:
-                        # (< (current_time) (goal__window_start ?r0 ?w1))) (decrease (total_benefit) (* 50 (- (goal__window_start ?r0 ?w1) (current_time)))))
-                        self.csv_line[prefix + 'n_goals_before_window'] += 1 # Goals before the window
-                    elif self.pddl3.adg.current_time > window[1]:
-                        # (> (current_time) (goal__window_end ?r0 ?w1))) (decrease (total_benefit) (* 50 (- (current_time) (goal__window_end ?r0 ?w1)))))
-                        self.csv_line[prefix + 'n_goals_after_window'] += 1
-                    else: #if self.current_time >= window[0] and self.current_time <= window[1]:
-                        self.csv_line[prefix + 'n_goals_in_window'] += 1
-                
-            # Cyclics
-            goal_last_time = last_times_map[str(grounded_goal)]
-            if goal_last_time and goal_name in self.pddl3.adg.timing_cyclics:
-                cycles = self.pddl3.adg.timing_cyclics[goal_name]
-                if params_str in cycles:
-                    interval = cycles[params_str]
-                    time_since_goal = self.pddl3.adg.current_time - goal_last_time
-                    if time_since_goal < interval:
-                        # (< (- (current_time) (goal__last_time ?o0 ?l1)) (goal__interval ?o0 ?l1))) (decrease (total_benefit) (* 50 (- (goal__interval ?o0 ?l1) (- (current_time) (goal__last_time ?o0 ?l1))))))
-                        #benefit -= self.outwindow_penalty * (interval - time_since_goal)
-                        self.csv_line[prefix + 'n_goals_before_cycle'] += 1
-                    elif time_since_goal > interval:
-                        # (> (- (current_time) (goal__last_time ?o0 ?l1)) (goal__interval ?o0 ?l1))) (increase (total_benefit) (* 500 (- (- (current_time) (goal__last_time ?o0 ?l1)) (goal__interval ?o0 ?l1)))))
-                        #benefit += self.inwindow_reward * (time_since_goal - interval)
-                        self.csv_line[prefix + 'n_goals_over_cycle'] += 1
-                    else: # if time_since_goal == interval:
-                        #benefit += self.inwindow_reward
-                        self.csv_line[prefix + 'n_goals_in_cycle'] += 1
-
-
     def run_eval(self):
         # Find initial benefit
         goals = eval.find_achieved_goals([])
@@ -248,6 +196,12 @@ class PDDL3GRAPEVAL:
             self.csv_line['final_minus_initial_benefit'] = total_benefit - self.csv_line['initial_state_benefit']
             self.csv_line['plan_length'] = len(plan)
 
+            violated_prefs = -((self.args.time_factor * mk) + (total_benefit * self.args.benefit_factor)-float(self.csv_line['plan_metric']))/self.args.violated_prefs_factor
+            print('Violated preferences: ' + str(violated_prefs))
+            metric = (self.args.time_factor * mk) + (total_benefit * self.args.benefit_factor) + (self.args.violated_prefs_factor*violated_prefs)
+            print('Computed metric = ' + str(metric))
+            print(f"Factors: ({self.args.time_factor}, {self.args.benefit_factor}, {self.args.violated_prefs_factor})")
+
         else:
             self.csv_line['plan_makespan'] = 0
             self.csv_line['final_benefit'] = 0
@@ -258,16 +212,16 @@ class PDDL3GRAPEVAL:
             self.csv_line['final_minus_initial_goals'] = self.csv_line['final_solved_goals'] - self.csv_line['initial_solved_goals']
             last_times_map = {}
             goals = []
-        
-        self.count_goals_in_windows(goals, last_times_map)
+
+        EvalUtils.count_goals_in_windows(self.csv_line, goals, last_times_map, self.pddl3.adg)
         self.write_csv_line(self.csv_line)
 
 
 def check_args():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("-d", '--domain', type=str,  help="Domain to be evaluated", default='/home/gerard/code/ROSPlan_ws/src/goalgeneration_as_planning/domains/office_robot/domain.pddl')
-    parser.add_argument("-p", '--problem', type=str,  help="Problem to be evaluated", default='/home/gerard/code/ROSPlan_ws/src/goalgeneration_as_planning/domains/office_robot/problem.pddl')
-    parser.add_argument("-g", '--cfg_path', type=str,  help="Config YAML file with benefits", default='/mnt/Data/grap_results/office_robot_hard_results/L2_n50_lb5_ub5/cfg.yaml')
+    parser.add_argument("-d", '--domain', type=str,  help="Domain to be evaluated", default=os.path.dirname(__file__) + '/../../domains/office_robot/domain.pddl')
+    parser.add_argument("-p", '--problem', type=str,  help="Problem to be evaluated", default=os.path.dirname(__file__) + '/../../domains/office_robot/problem.pddl')
+    parser.add_argument("-g", '--cfg_path', type=str,  help="Config YAML file with benefits", default='/mnt/Data/grap_results/office_robot_hard_results/L4_n25_lb-500_ub500/cfg.yaml')
 
     parser.add_argument("-o", '--output', type=str,  help="Output csv file", default='/tmp/pddl3_test.csv')
 
@@ -295,7 +249,7 @@ if __name__ == '__main__':
     eval = PDDL3GRAPEVAL(args.domain, args.problem, args.cfg_path, csv_file=args.output, planner_exec=args.planner_exec, 
                          planner_timeout=args.planner_timeout, use_conditionals=args.use_conditional_eff,
                          benefit_factor=args.benefit_factor, time_factor=args.time_factor,
-                         violated_prefs_factor=args.violated_prefs_factor)
+                         violated_prefs_factor=args.violated_prefs_factor, args=args)
     
     eval.run_eval()
     print('Done')

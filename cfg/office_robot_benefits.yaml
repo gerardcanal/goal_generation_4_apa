@@ -1,0 +1,33 @@
+horizon: 5
+instance_benefit:
+  paper: 3
+  mug: 5
+  wp0: 10 # kitchen
+  wp2: 3
+  wp4: -5
+  wp27: 5
+  person2: 3
+  person1: -4
+  robot_assistant: 5
+  robot_broken: -5
+  thing: 1000
+goal_benefit:
+  visited:
+    wp27: 90
+    wp35: 90
+  robot_at:
+    robot_assistant, wp40: 500
+  object_at:
+    mug, wp3: 1000
+    post2, robot_broken: 400
+timing_windows:
+  robot_at: # Window interval, goal should be between 5 and 15
+    robot_assistant, wp40:
+      - 5
+      - 15
+    robot_broken, wp5:
+      - 15
+      - 22
+timing_cycles:
+  object_at:
+    mug, wp3: 0.5  # Cyclic goal, it should happen every 30 min
