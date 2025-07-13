@@ -28,6 +28,7 @@ class PDDL3GRAPEVAL:
                  violated_prefs_factor=VIOLATED_PREFS_FACTOR, args=None):
         self.csv_line = {}
         self.start_time = time.time()
+        should_write_header = not os.path.exists(csv_file)
         self.csv_file = open(csv_file, 'a')
         self.args = args
         self.pddl3 = MakePDDL3GRAP(domain, problem, cfg_path, use_benefit, use_conditionals, benefit_factor, time_factor, violated_prefs_factor, out_folder=args.output_domains, postfix=args.postfix)
@@ -38,7 +39,6 @@ class PDDL3GRAPEVAL:
         self.problem_file = self.pddl3.problem_file
         self.planner_exec = planner_exec
         self.planner_timeout = planner_timeout
-        should_write_header = not os.path.exists(csv_file)
         print('Opened CSV file ' + self.csv_file.name + ' for writing')
         self.csv_header(should_write_header)
 
