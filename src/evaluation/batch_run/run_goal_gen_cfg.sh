@@ -1,4 +1,5 @@
 #!/bin/bash
+source /opt/env.sh # As it's not sourced in non-interactive shells
 export PYTHONPATH=$PYTHONPATH:/scratch/gerard/code/otpl
 
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
@@ -36,7 +37,7 @@ for OUT_FOLDER in $RESULTS_BASE_PATH/$RESULTS_FOLDER/*; do
                                                                               -p $PROBLEM \
                                                                               --cfg_path $BENEFIT_FILE \
                                                                               --solver_id $SOLVER_ID \
-                                                                              -uuid $_UUID \
+                                                                              --uuid $_UUID \
                                                                               --planner_timeout $PLANNER_TIMEOUT \
                                                                               --remove_percent $REMOVE_PERCENT \
                                                                               --removal_strategy $REMOVAL_STRATEGY \

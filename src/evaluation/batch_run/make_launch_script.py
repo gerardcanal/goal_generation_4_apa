@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 import argparse
 SCRIPTS_FOLDER = '/scratch/gerard/code/goal_generation_4_apa/src/evaluation/batch_run'
+BASE_CMD = f'time bash {SCRIPTS_FOLDER}/run_container.sh '
 
 def make_goalgen_sh(args):
     PLANNER_TIMEOUTS = [30]#, 150]# , 300] # Do 300 if there's time...!
@@ -10,7 +11,8 @@ def make_goalgen_sh(args):
     for planner_timeout in PLANNER_TIMEOUTS:
         for removal_strategy in REMOVAL_STRATEGY:
             for remove_percent in REMOVE_PERCENT:
-                    cmd = 'time bash ' + SCRIPTS_FOLDER + '/run_goal_gen_cfg.sh '
+                    #cmd = 'time bash ' + SCRIPTS_FOLDER + '/run_goal_gen_cfg.sh '
+                    cmd = BASE_CMD + SCRIPTS_FOLDER + '/run_goal_gen_cfg.sh '
                     cmd += args.domain + ' ' # DOMAIN=$1
                     cmd += args.problem + ' ' # PROBLEM=$2
                     cmd += str(planner_timeout) + ' ' # PLANNER_TIMEOUT=$3
@@ -22,8 +24,7 @@ def make_goalgen_sh(args):
     return ret
 
 def make_pddl3_sh(args):
-    BASE_CMD = f'time bash {SCRIPTS_FOLDER}/run_container.sh '
-    BASE_CMD += f'{SCRIPTS_FOLDER}/run_pddl3.sh '
+    base_cmd = BASE_CMD + f'{SCRIPTS_FOLDER}/run_pddl3.sh '
     #timeouts = [30, 150, 300, 600]
     timeouts = [600]
     # factors = [
@@ -46,7 +47,7 @@ def make_pddl3_sh(args):
     ret = []
     for b, t, p in factors:
         for to in timeouts:
-            cmd = BASE_CMD + args.domain + ' ' + args.problem + ' ' + str(to) + ' ' + str(b) + ' ' + str(t) + ' ' + str(p) + ' ' + args.results_folder
+            cmd = base_cmd + args.domain + ' ' + args.problem + ' ' + str(to) + ' ' + str(b) + ' ' + str(t) + ' ' + str(p) + ' ' + args.results_folder
             ret.append((to, cmd))
     return ret
 
@@ -56,6 +57,9 @@ def make_scripts(cmds, output_folder, num_splits, type):
     cmds = sorted(cmds, reverse=True)
     files = []
     counters = []
+    if (len(cmds) < num_splits):
+        num_splits = len(cmds)
+        print("Warning: Number of splits is greater than number of commands. Reducing number of splits to", str(num_splits) + "!")
     for i in range(num_splits):
         files.append(open(output_folder + f'run_{type}_cfg_batch_' + str(i) + '.sh', 'w'))
         files[i].write('#!/bin/bash\n')
@@ -98,5 +102,6 @@ if __name__ == '__main__':
         for cmd in cmds:
             print(cmd[1])
     else:
+        print("Creating scripts for", len(cmds), "commands.")
         make_scripts(cmds, args.out_folder, args.num_splits, args.type)
     

@@ -1,4 +1,5 @@
 #!/bin/bash
+source /opt/env.sh # As it's not sourced in non-interactive shells
 export PYTHONPATH=$PYTHONPATH:/scratch/gerard/code/otpl
 
 RESULTS_FOLDER=$7 # DOMAIN NAME

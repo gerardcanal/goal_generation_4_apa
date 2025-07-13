@@ -981,4 +981,5 @@
     (person_asked person2)
     (object_at post2 person2)
 ))
+(:metric minimize (total-time))
 )
