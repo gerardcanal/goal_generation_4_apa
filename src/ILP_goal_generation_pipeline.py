@@ -82,7 +82,7 @@ class GoalGenerationPipeline:
                         print(f'Removing a {self.remove_percent}% of the goals ({n_to_remove} goals) at random, trying to plan with {len(goals)} goals...')
                     else:
                         eprint('Unknown removal strategy ' + self.removal_strategy)
-                        return False, plan, [], n_replans, n_unsolvable_plans
+                        return False, plan, [], n_replans, n_unsolvable_plans, plan
                     
                     print('Goals after removal:')
                     total_benefit = self.compute_benefit_goal_list(goals, last_times_map, True)
@@ -100,11 +100,11 @@ class GoalGenerationPipeline:
                 if n_to_remove == 0 and (plan == "UNSOLVABLE" or plan == "NO_PLAN"):
                     goals = []  # We couldn't solve any goal!
                     print('############### All goals were removed! Problem is unsolvable.')
-                    return False, plan, goals, n_replans, n_unsolvable_plans
+                    return False, plan, goals, n_replans, n_unsolvable_plans, plan
 
                 if not isinstance(plan, str): # If plan is a string, it means the planner failed with NO_PLAN, UNSOLVABLE or PLANNER_ERROR
                     print(f'Goal Generation completed after {n_replans} trials with {len(goals)} goals out of the original {len(original_goals)} and a total benefit of {total_benefit}.')
-                    return True, plan, goals, n_replans, n_unsolvable_plans
+                    return True, plan[0], goals, n_replans, n_unsolvable_plans, plan[1]
 
     def run_planner(self, goals, planner=PLANNER): # popf or rewrite-no-lp
         # Generate the domain and problem files for the planner with the new goals
