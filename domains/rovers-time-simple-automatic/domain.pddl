@@ -97,7 +97,7 @@
 (:durative-action take_image
  :parameters (?r - rover ?p - waypoint ?o - objective ?i - camera ?m - mode)
  :duration (= ?duration 7)
- :condition (and (over all (calibrated ?i ?r))
+ :condition (and (at start (calibrated ?i ?r))
        (at start (on_board ?i ?r))
                       (over all (equipped_for_imaging ?r))
                       (over all (supports ?i ?m) )
