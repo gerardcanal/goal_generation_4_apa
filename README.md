@@ -1,7 +1,6 @@
 # Goal Generation for Autonomous Planning Agents
 
-## Usage
-Abstract:
+## Abstract
 
 
 ## Usage
