@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+# Gerard Canal <gerard.canal@kcl.ac.uk>
+# King's College London, 2025
+
 from datetime import datetime
 from abstract_goal_generator import AbstractGoalGenerator
 from ortools.linear_solver import pywraplp
@@ -103,7 +106,7 @@ class ILPGoalGenerator:
                 #print(g[i].name(), " = ", g[i].solution_value())
                 if (self.g[i].solution_value()):
                     assert str(self.potential_goals[i]) in self.g[i].name(), f"Error: Goal variable {i} name {self.g[i].name()} does not match potential goal {self.potential_goals[i]}"
-                    self.dprint(f"  Goal {i}: {self.potential_goals[i]} is selected with benefit {self.b[i]}.")
+                    print(f"  Goal {i}: {self.potential_goals[i]} is selected with benefit {self.b[i]}.")
                     goals.append((self.potential_goals[i], self.b[i]))  # Remove parentheses and split into list
             print()
             print(f"Problem solved in {self.solver.wall_time():d} milliseconds")

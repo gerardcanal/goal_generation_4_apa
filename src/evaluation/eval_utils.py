@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+# Gerard Canal <gerard.canal@kcl.ac.uk>
+# King's College London, 2025
+
 class EvalUtils:
     @staticmethod
     def count_goals_in_windows(csv_line, goals, last_times_map, adg, prefix='final'):

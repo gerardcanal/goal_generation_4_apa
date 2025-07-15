@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+
+# Gerard Canal <gerard.canal@kcl.ac.uk>
+# King's College London, 2025
+
 import subprocess
 import re
 import os

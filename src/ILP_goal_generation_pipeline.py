@@ -1,4 +1,8 @@
 #!/usr/bin/env python
+
+# Gerard Canal <gerard.canal@kcl.ac.uk>
+# King's College London, 2025
+
 import argparse
 import os
 from ILP_goal_generator import ILPGoalGenerator
@@ -104,6 +108,7 @@ class GoalGenerationPipeline:
 
                 if not isinstance(plan, str): # If plan is a string, it means the planner failed with NO_PLAN, UNSOLVABLE or PLANNER_ERROR
                     print(f'Goal Generation completed after {n_replans} trials with {len(goals)} goals out of the original {len(original_goals)} and a total benefit of {total_benefit}.')
+                    print(f'     Total planning time was {n_replans * self.planner_timeout + float(plan[0][0])} seconds.')
                     return True, plan[0], goals, n_replans, n_unsolvable_plans, plan[1]
 
     def run_planner(self, goals, planner=PLANNER): # popf or rewrite-no-lp
@@ -154,7 +159,7 @@ class GoalGenerationPipeline:
                 plan_match[-1] = [plan_match[-1][1], plan_match[-1][0], plan_match[-1][2]]  # [time, metric, plan]
                 if len(plan_match) > 1:
                     plan_match[0] = [plan_match[0][1], plan_match[0][0], plan_match[0][2]]  # [time, metric, plan]
-            print(f'Plan found with metric value {plan_match[-1][1]} after {plan_match[-1][0]} seconds.')
+            print(f'Plan with {len(plan_match[-1][2].strip().split('\n'))} actions found with metric value {plan_match[-1][1]} after {plan_match[-1][0]} seconds.')
             return plan_match[-1], plan_match[0]  # Return the last found plan as [time, metric, plan] and the first one
         
         if re.search('unsolvable', output, re.IGNORECASE):
@@ -187,9 +192,9 @@ class GoalGenerationPipeline:
 
 def parse_args(eval=False):
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("-d", '--domain', type=str,  help="Domain to be evaluated", default=os.path.dirname(__file__) + '/../domains/office_robot/domain.pddl')
-    parser.add_argument("-p", '--problem', type=str,  help="Problem to be evaluated", default=os.path.dirname(__file__) + '/../domains/office_robot/problem.pddl')
-    parser.add_argument("-g", '--cfg_path', type=str,  help="Config YAML file with benefits", default=os.path.dirname(__file__) + '/../cfg/office_robot_benefits_wt.yaml')
+    parser.add_argument("-d", '--domain', type=str,  help="Domain to be evaluated", default=os.path.dirname(__file__) + '/../domains/rovers-time-simple-automatic/domain.pddl')
+    parser.add_argument("-p", '--problem', type=str,  help="Problem to be evaluated", default='/tmp/instance-12lc.pddl')
+    parser.add_argument("-g", '--cfg_path', type=str,  help="Config YAML file with benefits", default=os.path.dirname(__file__) + '/../evaluation_cfgs/rovers/L1_n-1_lb5_ub500/cfg.yaml')
     #parser.add_argument("-g", '--cfg_path', type=str,  help="Config YAML file with benefits", default='/mnt/Data/grap_results/rovers_results/L2_n60_lb5_ub5/cfg.yaml')
     
     parser.add_argument("-s", '--solver_id', type=str,  help="Solver ID", default="GLOP")  # GLOP, CLP, CPLEX, CPSAT

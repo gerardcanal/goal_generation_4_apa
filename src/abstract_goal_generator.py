@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+# Gerard Canal <gerard.canal@kcl.ac.uk>
+# King's College London, 2025
+
 from domain_problem_parser import PDDLExtractor
 from datetime import datetime
 from mutex_parser import PDDLMutexParser

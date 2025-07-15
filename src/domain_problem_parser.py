@@ -1,4 +1,8 @@
-#!/usr/bin/python3.9
+#!/usr/bin/env python
+
+# Gerard Canal <gerard.canal@kcl.ac.uk>
+# King's College London, 2025
+
 from pddl.parser import Parser
 from pddl.time_spec import TimeSpec
 from pddl.effect import EffectSimple, EffectNegative

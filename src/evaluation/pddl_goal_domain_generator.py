@@ -1,4 +1,7 @@
-#!/usr/bin/python3.9
+#!/usr/bin/env python
+
+# Gerard Canal <gerard.canal@kcl.ac.uk>
+# King's College London, 2025
 
 from pddl.domain import Domain
 from pddl.problem import Problem
@@ -16,6 +19,7 @@ from abstract_goal_generator import AbstractGoalGenerator
 import copy
 import itertools
 
+# TODO clean unsued methods
 
 DEFAULT_BENEFIT = 0.0
 

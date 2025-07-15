@@ -1,4 +1,8 @@
 #!/usr/bin/env python
+
+# Gerard Canal <gerard.canal@kcl.ac.uk>
+# King's College London, 2025
+
 import sys; import os; sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))  # Hack to add src to path
 
 from pddl_goal_domain_generator import PDDLDomainGenerator
