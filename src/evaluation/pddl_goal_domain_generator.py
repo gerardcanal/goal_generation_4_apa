@@ -19,8 +19,6 @@ from abstract_goal_generator import AbstractGoalGenerator
 import copy
 import itertools
 
-# TODO clean unsued methods
-
 DEFAULT_BENEFIT = 0.0
 
 class PDDLDomainGenerator(AbstractGoalGenerator):

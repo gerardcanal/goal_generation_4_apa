@@ -7,6 +7,7 @@ from pddl.parser import Parser
 from pddl.time_spec import TimeSpec
 from pddl.effect import EffectSimple, EffectNegative
 from pddl.goal_descriptor import GoalSimple
+import os
 
 class PDDLExtractor:
     def __init__(self, domain_file, problem_file):
@@ -121,8 +122,9 @@ class _PredicateInCondition:
 
 
 if __name__ == "__main__":
-    domain_file = "/home/gerard/code/ROSPlan_ws/src/task_plan_verbalization/domains/office_robot/domain.pddl"
-    domain_extractor = PDDLExtractor(domain_file, '')
+    domain_file = os.path.dirname(__file__) + '/../domains/rovers-time-simple-automatic/domain.pddl'
+    problem_file = os.path.dirname(__file__) + '/../domains/rovers-time-simple-automatic/instance-20.pddl'
+    domain_extractor = PDDLExtractor(domain_file, problem_file)
     print(domain_extractor.get_domain_name())
     print(domain_extractor.find_potential_goals())
 
