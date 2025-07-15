@@ -1,7 +1,7 @@
 # Goal Generation for Autonomous Planning Agents
 
 ## Abstract
-To increase their autonomy, intelligent agents require the ability to decide which objectives to pursue from all the possible achievable ones. Once a set of goals has been chosen, a symbolic planner can find an executable plan to fulfil them. However, this is a complex problem that requires the optimisation of different conflicting metrics, such as the goal utility, the plan cost, and its makespan.
+To become more autonomous, intelligent agents must be able to determine which objectives to pursue from all the achievable ones. Once a set of goals has been chosen, a symbolic planner can find an executable plan to fulfil them. However, this is a complex problem that requires the optimisation of different conflicting metrics, such as the goal utility, the plan cost, and its makespan.
 In this paper, we first propose a method to identify a set of potential goals in a PDDL domain. Next, we find the achievable subset of goals that yield the most benefit by posing the problem as an integer linear program. Finally, a planner is used to find a plan for the resulting goal subset. 
 The proposed method is generic, planner-independent, and generates sets of goals that are reachable and not mutually exclusive, increasing the chances of finding a solvable plan.
 We demonstrate the effectiveness of the proposed approach in comparison with a baseline oversubscription planner.
