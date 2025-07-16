@@ -9,6 +9,7 @@ from ortools.linear_solver import pywraplp
 import sys, os
 import numpy as np
 import uuid
+import random
 
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
@@ -18,6 +19,9 @@ class ILPGoalGenerator:
         self.agg = AbstractGoalGenerator(domain_file, problem_file, n_goals, current_time, check_unreachable, check_mutexes, uuid=uuid)
         self.potential_goals = self.agg.get_grounded_predicates(self.agg.potential_goals)
         self.solver = None
+        self.random_benefits = False  # If True, use random benefits instead of the ones from the config file
+        if self.random_benefits:
+            print('\033[93m'+'\033[1m'+"[WARNING] Using random benefits for goals! This is for testing purposes only."+'\033[0m')
         self.debug = debug
 
     def load_cfg(self, cfg_file):
@@ -55,7 +59,10 @@ class ILPGoalGenerator:
             g.append(self.solver.BoolVar(f"g{i} - {pg}"))  # Boolean variable for goal satisfaction 
             goal2idx[str(pg)] = i
             #b[i] = self.solver.IntVar(0.0, infinity, f'b{i} - {pg}') # Benefit variable for goal i
-            b.append(self.agg.get_grounded_goal_benefit(str(pg)[1:-1].split(), self.agg.get_last_goal_time(pg)))  # Get the benefit of the goal
+            if self.random_benefits:
+                b.append(random.randint(-500, 500))
+            else:
+                b.append(self.agg.get_grounded_goal_benefit(str(pg)[1:-1].split(), self.agg.get_last_goal_time(pg)))  # Get the benefit of the goal
         print("Number of variables =", self.solver.NumVariables())
 
         # Add constraints
@@ -131,8 +138,8 @@ if __name__ == '__main__':
     # problem_file = os.path.dirname(__file__) + '/../domains/rovers-time-simple-automatic/instance-20.pddl'
     generator = ILPGoalGenerator(domain_file, problem_file)
     #generator.load_cfg(os.path.dirname(__file__) + '/../cfg/cfg.yaml')
-    #generator.load_cfg(os.path.dirname(__file__) + '/../cfg/blank_benefit.yaml')
-    generator.load_cfg('/mnt/Data/grap_results/parking_results/L2_n60_lb5_ub5/cfg.yaml')
+    generator.load_cfg(os.path.dirname(__file__) + '/../cfg/blank_benefit.yaml')
+    #generator.load_cfg('/mnt/Data/grap_results/parking_results/L2_n60_lb5_ub5/cfg.yaml')
     #generator.set_state(['not_holding_object robot_assistant', 'robot_at robot_assistant wp0'])
     
     generator.make_ILP(solver_id="GLOP")
