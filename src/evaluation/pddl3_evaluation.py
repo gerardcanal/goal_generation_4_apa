@@ -16,8 +16,8 @@ from eval_utils import EvalUtils
 USE_BENEFIT = True
 USE_CONDITIONAL_TIMED_EFFECTS = True
 BENEFIT_FACTOR = -1 #-0.01
-TIME_FACTOR = 0.3 # 0.03
-VIOLATED_PREFS_FACTOR = 1.5
+TIME_FACTOR = 0.003 # 0.03
+VIOLATED_PREFS_FACTOR = 1
 PLANNER_EXEC = "/home/gerard/Nextcloud/optic-clp/tuned_tautologous/optic-cplex"
 PLANNER_EXEC = "/home/gerard/Nextcloud/optic-clp/optic-cplex"
 PLANNER_EXEC = "/home/gerard/Nextcloud/optic-clp/contradictory_tuned/optic-cplex"
@@ -98,7 +98,8 @@ class PDDL3GRAPEVAL:
         if plan:
             # Some domains may have uppercase action names, that optic makes lower case. This reverts it
             lower_case_op_map = {op_name.lower(): op_name for op_name in domain.operators.keys()}
-            plan = [(a[0], [lower_case_op_map[a[1][0]]] + a[1][1:], a[2]) for a in plan]  # Convert plan to original case
+            lower_case_instance_map = {inst.lower(): inst for inst in problem.objects_type_map.keys()}
+            plan = [(a[0], [lower_case_op_map[a[1][0]]] + [lower_case_instance_map[v] for v in a[1][1:]], a[2]) for a in plan]  # Convert plan to original case
 
             final_state, _ = PlanUtils.simulate_plan_execution(domain, problem, plan)
         else:

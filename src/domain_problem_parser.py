@@ -20,7 +20,7 @@ class PDDLExtractor:
         if not self.domain:
             print(f"[ERROR] Could not parse domain file {domain_file}.")
             sys.exit(1)
-        parser.parse_file(problem_file)
+        parser.parse_file(problem_file)        
         self.problem = parser.problem
 
     def get_domain_name(self):
@@ -68,9 +68,10 @@ class PDDLExtractor:
                 ae_found = _PredicateInEffect(pred, False)
                 if atstart: atstart.visit(PDDLExtractor.check_in_effect, valid_types=(EffectSimple), args=[as_found])
                 if atend: atend.visit(PDDLExtractor.check_in_effect, valid_types=(EffectSimple), args=[ae_found])
+                different_params = ae_found.add or as_found.predicate.typed_parameters != ae_found.predicate.typed_parameters # It should be an add effect (so we don't always delete the goal) or have different parameters
                 # if it was found at start and at end 
-                if ((as_found.found and ae_found.found) and ((as_found.delete and ae_found.add) or (as_found.add and ae_found.delete))) or \
-                   (as_found.found and (as_found.add and as_found.delete)) or (ae_found.found and (ae_found.add and ae_found.delete)):
+                if different_params and (((as_found.found and ae_found.found) and ((as_found.delete and ae_found.add) or (as_found.add and ae_found.delete))) or \
+                   (as_found.found and (as_found.add and as_found.delete)) or (ae_found.found and (ae_found.add and ae_found.delete))):
                     potential_goals.add(pred)
                 if as_found.found: effs.append(as_found)
                 if ae_found.found: effs.append(ae_found)

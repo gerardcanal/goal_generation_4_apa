@@ -130,7 +130,7 @@ class MakePDDL3GRAP:
     
     def add_functions(self, d):
         if self.precomputed_benefit:
-            for goal in self.grounded_potential_goals:
+            for goal in self.potential_goals:
                 params_map = {f'?{tp.type[0]}{i}': tp.type if not self._fix_object_type or tp.type != 'object' else 'obj' for i, tp in enumerate(goal.typed_parameters)}
                 d.add_function_from_str('benefit_' + goal.name, params_map)
         else:
