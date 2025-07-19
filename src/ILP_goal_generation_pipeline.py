@@ -193,7 +193,7 @@ class GoalGenerationPipeline:
 def parse_args(eval=False):
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("-d", '--domain', type=str,  help="Domain to be evaluated", default=os.path.dirname(__file__) + '/../domains/rovers-time-simple-automatic/domain.pddl')
-    parser.add_argument("-p", '--problem', type=str,  help="Problem to be evaluated", default='/tmp/instance-12lc.pddl')
+    parser.add_argument("-p", '--problem', type=str,  help="Problem to be evaluated", default=os.path.dirname(__file__) + '/../domains/rovers-time-simple-automatic/instance-20.pddl')
     parser.add_argument("-g", '--cfg_path', type=str,  help="Config YAML file with benefits", default=os.path.dirname(__file__) + '/../evaluation_cfgs/rovers/L1_n-1_lb5_ub500/cfg.yaml')
     #parser.add_argument("-g", '--cfg_path', type=str,  help="Config YAML file with benefits", default='/mnt/Data/grap_results/rovers_results/L2_n60_lb5_ub5/cfg.yaml')
     

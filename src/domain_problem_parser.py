@@ -8,6 +8,7 @@ from pddl.time_spec import TimeSpec
 from pddl.effect import EffectSimple, EffectNegative
 from pddl.goal_descriptor import GoalSimple
 import os
+import sys
 
 class PDDLExtractor:
     def __init__(self, domain_file, problem_file):
@@ -16,6 +17,9 @@ class PDDLExtractor:
         parser = Parser()
         parser.parse_file(domain_file)
         self.domain = parser.domain
+        if not self.domain:
+            print(f"[ERROR] Could not parse domain file {domain_file}.")
+            sys.exit(1)
         parser.parse_file(problem_file)
         self.problem = parser.problem
 

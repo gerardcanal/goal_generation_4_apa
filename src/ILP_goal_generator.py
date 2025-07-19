@@ -71,7 +71,7 @@ class ILPGoalGenerator:
         self.solver.Add(sum([g[i] for i in range(len(g))]) <= n_goals)
         #self.solver.Add(sum([g[i] for i in range(len(g))]) == n_goals)
 
-        # C2 : g_i + g_j <= 1 for all mutex pairs (i,j)
+        # C2 : sum_i{g_i} <= 1 for all mutex pairs variables
         for instance, mutex_group in self.agg.mutex_groups:
             self.solver.Add(sum([g[goal2idx['(' + mgi + ')']] for mgi in mutex_group if ('(' + mgi + ')') in goal2idx]) <= 1)
 

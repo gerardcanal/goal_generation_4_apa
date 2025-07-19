@@ -39,8 +39,10 @@ class MakePDDL3GRAP:
         self.is_domain_durative = any([op.durative for op in self.adg.pddl_extractor.domain.operators.values()])
         if self.precomputed_benefit:
             self.grounded_potential_goals = self.adg.get_grounded_predicates(self.adg.potential_goals)
+        self.domain_made = False
 
     def make_pddl3_problem(self):
+        assert self.domain_made == True, "You need to call make_pddl3_domain() first!"
         pddl_goal_metric = ('(:goal (and\n')
         for i, g in enumerate(self.all_goals):
             pddl_goal_metric += (f'    (preference p{i} {g})\n')
@@ -75,7 +77,7 @@ class MakePDDL3GRAP:
                 self.adg.add_init_state(problem, add_supertype_benefit=True)
 
         for inst, _type in problem.objects_type_map.items():
-            if _type == 'object':
+            if self._fix_object_type and _type == 'object':
                 problem.objects_type_map[inst] = 'obj'
         # Add initial state metrics
         problem.goal = GoalDescriptor()
@@ -98,10 +100,20 @@ class MakePDDL3GRAP:
         problem.add_assignment_from_str(0.0, "total_benefit")
 
     def add_violated_prefs_factor(self):
-        return self.violated_prefs_factor > 0 and self.violated_prefs_factor < 1
+        return self.violated_prefs_factor > 0 and self.violated_prefs_factor != 1
 
     def prepare_domain(self):
         # Fixes issues by changing types like object to obj to prevent otpl errors
+        # This mainly happens because office_robot has a type object, which is not allowed in otpl (and PDDL in general...)
+        parser = Parser()
+        parser.parse_file(self.adg.pddl_extractor.domain_file)
+        domain = parser.domain
+        if 'object' not in domain.type_tree:
+            self._fix_object_type = False
+            return domain
+        
+        self._fix_object_type = True
+
         with open(self.adg.pddl_extractor.domain_file, 'r') as f:
             domain = f.read()
         
@@ -119,7 +131,7 @@ class MakePDDL3GRAP:
     def add_functions(self, d):
         if self.precomputed_benefit:
             for goal in self.grounded_potential_goals:
-                params_map = {f'?{tp.type[0]}{i}': tp.type if tp.type != 'object' else 'obj' for i, tp in enumerate(goal.typed_parameters)}
+                params_map = {f'?{tp.type[0]}{i}': tp.type if not self._fix_object_type or tp.type != 'object' else 'obj' for i, tp in enumerate(goal.typed_parameters)}
                 d.add_function_from_str('benefit_' + goal.name, params_map)
         else:
             # Adapted from pddl_domain_generator.py
@@ -128,23 +140,23 @@ class MakePDDL3GRAP:
                 for tp in goal.typed_parameters:
                     if tp.type in processed_types:
                         continue
-                    d.add_function_from_str(f'benefit_{tp.type if tp.type != "object" else "obj"}', {'?' + tp.type[0]: tp.type if tp.type != 'object' else 'obj'})
+                    d.add_function_from_str(f'benefit_{tp.type if tp.type != "object" else "obj"}', {'?' + tp.type[0]: tp.type if not self._fix_object_type or tp.type != 'object' else 'obj'})
                     processed_types.append(tp.type)
             if self.adg.timing_windows or self.adg.timing_cyclics:
                 d.add_function_from_str('current_time')
             for pred_name, _ in self.adg.timing_windows.items():
                     formula = self.adg.pddl_extractor.domain.predicates[pred_name]
-                    params_map = {'?' + tp.type[0] + str(i): tp.type if tp.type != 'object' else 'obj' for i, tp in enumerate(formula.typed_parameters)}
+                    params_map = {'?' + tp.type[0] + str(i): tp.type if not self._fix_object_type or tp.type != 'object' else 'obj' for i, tp in enumerate(formula.typed_parameters)}
                     d.add_function_from_str(pred_name + '__window_start', params_map)
                     d.add_function_from_str(pred_name + '__window_end', params_map)
             for pred_name, _ in self.adg.timing_cyclics.items():
                     formula = self.adg.pddl_extractor.domain.predicates[pred_name]
-                    params_map = {'?' + tp.type[0] + str(i): tp.type if tp.type != 'object' else 'obj' for i, tp in enumerate(formula.typed_parameters)}
+                    params_map = {'?' + tp.type[0] + str(i): tp.type if not self._fix_object_type or tp.type != 'object' else 'obj' for i, tp in enumerate(formula.typed_parameters)}
                     d.add_function_from_str(pred_name + '__interval', params_map)
                     d.add_function_from_str(pred_name + '__last_time', params_map)
             for goal, _ in self.adg.goal_benefits.items():
                 formula = self.adg.pddl_extractor.domain.predicates[goal]
-                params_map = {'?' + tp.type[0] + str(i): tp.type if tp.type != 'object' else 'obj' for i, tp in enumerate(formula.typed_parameters)}
+                params_map = {'?' + tp.type[0] + str(i): tp.type if not self._fix_object_type or tp.type != 'object' else 'obj' for i, tp in enumerate(formula.typed_parameters)}
                 d.add_function_from_str('benefit_' + goal, params_map)
         d.add_function_from_str('total_benefit')
         d.add_function_from_str('n_actions')
@@ -294,6 +306,7 @@ class MakePDDL3GRAP:
             f.write(str(domain))
         self.adg.problem.domain = domain
         print(f"Domain with preferences saved to {self.domain_file}")
+        self.domain_made = True
         return domain
         with open(self.adg.pddl_extractor.domain_file, 'r') as f:
             domain = f.read()
@@ -311,6 +324,8 @@ if __name__ == '__main__':
     import os
     domain = os.path.dirname(__file__) + '/../../domains/rovers-time-simple-automatic/domain.pddl'
     problem = os.path.dirname(__file__) + '/../../domains/rovers-time-simple-automatic/instance-20.pddl'
+    domain = os.path.dirname(__file__) + '/../../domains/office_robot/domain.pddl'
+    problem = os.path.dirname(__file__) + '/../../domains/office_robot/problem.pddl'
     
     if len(sys.argv) > 1:
         domain = sys.argv[1]
@@ -318,9 +333,9 @@ if __name__ == '__main__':
     if len(sys.argv) > 2:
         cfg = sys.argv[3]
     else:
-        cfg = '/home/gerard/code/ROSPlan_ws/src/goalgeneration_as_planning/cfg/blank_benefit.yaml'
-        cfg = '/mnt/Data/grap_results/rovers_results/L2_n50_lb5_ub5/cfg.yaml'
-        cfg = '/media/gerard/Elements/backups/arbok/Data/grap_results/rovers_results/L2_n50_lb5_ub5/cfg.yaml'
+        cfg = os.path.dirname(__file__) + '/../../cfg/blank_benefit.yaml'
+        #cfg = '/mnt/Data/grap_results/rovers_results/L2_n50_lb5_ub5/cfg.yaml'
+        # cfg = '/media/gerard/Elements/backups/arbok/Data/grap_results/rovers_results/L2_n50_lb5_ub5/cfg.yaml'
 
     domain_maker = MakePDDL3GRAP(domain, problem, cfg_path=cfg)
     domain_maker.make_pddl3_domain()
