@@ -101,7 +101,7 @@ class GoalGenerationPipeline:
 
                     n_replans += 1
 
-                if n_to_remove == 0 and (plan == "UNSOLVABLE" or plan == "NO_PLAN"):
+                if not goals or (n_to_remove == 0 and (plan == "UNSOLVABLE" or plan == "NO_PLAN")):
                     goals = []  # We couldn't solve any goal!
                     print('############### All goals were removed! Problem is unsolvable.')
                     return False, plan, goals, n_replans, n_unsolvable_plans, plan
