@@ -12,6 +12,7 @@ import numpy as np
 from make_pddl3_domain import MakePDDL3GRAP
 from evaluation.plan_utils import PlanUtils
 from eval_utils import EvalUtils
+import copy
 
 USE_BENEFIT = True
 USE_CONDITIONAL_TIMED_EFFECTS = True
@@ -116,7 +117,7 @@ class PDDL3GRAPEVAL:
     def csv_header(self, write_header):
         self.csv_fields = ['init_time', 'planning_time',  'planning_reported_real_time', 'total_time', 'n_unsolvable_plans', 'n_empty_plans',
                            # 'requested_goals',  # FIXME in case I try -nP-Goals
-                           'initial_solved_goals', 'final_solved_goals', 'final_minus_initial_goals',
+                           'initial_solved_goals', 'final_solved_goals', 'final_minus_initial_goals', 'new_goals',
                            'final_n_goals_in_window',
                            'final_n_goals_after_window',
                            'final_n_goals_before_window',
@@ -128,7 +129,8 @@ class PDDL3GRAPEVAL:
                            'max_n_pos_goals_benefit', 'max_n_neg_goals_benefit',
                            'plan_length', 'plan_makespan', 'plan_metric',
                            'initial_state_benefit', 'final_minus_initial_benefit',
-                           'max_benefit', 'max_positive_benefit', 'final_benefit'
+                           'max_benefit', 'max_positive_benefit', 'final_benefit',
+                           'new_goals_benefit'
                           ]
         if write_header:
             self.csv_file.write(','.join(self.csv_fields) + '\n') # Write header
@@ -154,6 +156,16 @@ class PDDL3GRAPEVAL:
         self.csv_file.flush()
 
     def get_last_time_map(self, goals):
+        last_time_map = {}
+        for goal in goals:
+            last_time = self.pddl3.adg.get_last_goal_time(goal)
+            if last_time is not None:
+                last_time_map[str(goal)] = last_time
+            else:
+                last_time_map[str(goal)] = self.pddl3.adg.current_time  # If no last time is found, use the current time
+        return last_time_map
+
+        # Below is for when the PDDL3 domain doesn't have precomputed benefits
         with open(self.problem_file, 'r') as f:
             problem_file = f.read()
         last_times_goals = {}
@@ -188,6 +200,7 @@ class PDDL3GRAPEVAL:
         last_times_map = self.get_last_time_map(self.pddl3.all_goals)
         self.csv_line['initial_state_benefit'] = self.compute_benefit_goal_list(goals, last_times_map, print_goals=False)
         self.csv_line['initial_solved_goals'] = len(goals)
+        initial_goals = [str(g) for g in goals]  # Keep the initial goals for later
         
         # Now plan
         plan = eval.run_planner()
@@ -197,6 +210,8 @@ class PDDL3GRAPEVAL:
             goals = eval.find_achieved_goals(plan)
             self.csv_line['final_solved_goals'] = len(goals)
             self.csv_line['final_minus_initial_goals'] = self.csv_line['final_solved_goals'] - self.csv_line['initial_solved_goals']
+            new_goals = [g for g in goals if str(g) not in initial_goals]
+            self.csv_line['new_goals'] = len(new_goals)
             print('Found ' + str(len(goals)) + ' goals:')
             for g in goals:
                 print('   ', g)
@@ -212,6 +227,9 @@ class PDDL3GRAPEVAL:
             last_times_map = self.get_last_time_map(goals)
             total_benefit = self.compute_benefit_goal_list(goals, last_times_map, print_goals=False)
             print('Benefit: ' + str(total_benefit))
+            new_goals_benefit = self.compute_benefit_goal_list(new_goals, last_times_map, print_goals=False)
+            print('Benefit of new goals:', new_goals_benefit)
+            self.csv_line['new_goals_benefit'] = new_goals_benefit
             self.csv_line['final_benefit'] = total_benefit
             self.csv_line['final_minus_initial_benefit'] = total_benefit - self.csv_line['initial_state_benefit']
             self.csv_line['plan_length'] = len(plan)
@@ -241,7 +259,7 @@ def check_args():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("-d", '--domain', type=str,  help="Domain to be evaluated", default=os.path.dirname(__file__) + '/../../domains/rovers-time-simple-automatic/domain.pddl')
     parser.add_argument("-p", '--problem', type=str,  help="Problem to be evaluated", default=os.path.dirname(__file__) + '/../../domains/rovers-time-simple-automatic/instance-20.pddl')
-    parser.add_argument("-g", '--cfg_path', type=str,  help="Config YAML file with benefits", default=os.path.dirname(__file__) + '/../../evaluation_cfgs/rovers/L1_n-1_lb5_ub5/cfg.yaml')
+    parser.add_argument("-g", '--cfg_path', type=str,  help="Config YAML file with benefits", default=os.path.dirname(__file__) + '/../../evaluation_cfgs/rovers/L4_n10_lb-500_ub5/cfg.yaml')
 
     parser.add_argument("-o", '--output', type=str,  help="Output csv file", default='/tmp/pddl3_test.csv')
 

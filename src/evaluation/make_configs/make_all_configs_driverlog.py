@@ -34,7 +34,7 @@ LP1 = {
     '-ca': 0,
 }
 LP2 = {
-    '-i': 84,  # Max instances is 84
+    '-i': 54,  # Max instances is 54
     '-g': 150,
     '-ti': 0,
     '-to': 0,

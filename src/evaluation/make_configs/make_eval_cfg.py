@@ -119,6 +119,8 @@ class MakeCFG:
                        f'{self.args.current_time} > {self.cfg["timing_windows"][goal.name][params_str][1]}'
 
         assert in_counter + out_counter == total
+        assert in_counter == self.args.n_in_time_windows and out_counter == self.args.n_out_time_windows
+        print(" N in window: ", in_counter, f"({self.args.n_in_time_windows}) N out window:", out_counter, f"({self.args.n_out_time_windows}) Total:", in_counter + out_counter)
         return selected_goals
 
     def get_in_bounds(self):
