@@ -39,7 +39,9 @@ class GGEval(GoalGenerationPipeline):
                            'initial_n_goals_in_cycle', 'final_n_goals_in_cycle',
                            'initial_n_goals_over_cycle', 'final_n_goals_over_cycle',
                            'initial_n_goals_before_cycle', 'final_n_goals_before_cycle', 
-                           'initial_n_goals_benefit', 'final_n_goals_benefit',
+                           'initial_n_pos_goals_benefit', 'final_n_pos_goals_benefit',
+                            'initial_n_neg_goals_benefit', 'final_n_neg_goals_benefit',
+                            'max_n_pos_goals_benefit', 'max_n_neg_goals_benefit', # Max number of goals with specific positive and negative benefits
                            'planner_timeout',
                            'plan_length',
                            'plan_makespan',
@@ -137,6 +139,14 @@ class GGEval(GoalGenerationPipeline):
         return [g[0] for g in goals]
 
     def write_csv_line(self, line):
+        # Count number of positive and negative specific goal benefits
+        self.csv_line['max_n_pos_goals_benefit'] = self.csv_line['max_n_neg_goals_benefit'] = 0
+        for g, params in self.goal_generator.agg.goal_benefits.items():
+            for p, v in params.items():
+                if v > 0:
+                    self.csv_line['max_n_pos_goals_benefit'] += 1
+                else:
+                    self.csv_line['max_n_neg_goals_benefit'] += 1
         for field in self.csv_fields:
             assert field in line, f'Field {field} not in line {line}'
         for field in line:

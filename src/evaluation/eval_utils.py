@@ -13,7 +13,8 @@ class EvalUtils:
         csv_line[prefix + 'n_goals_in_cycle'] = 0
         csv_line[prefix + 'n_goals_over_cycle'] = 0
         csv_line[prefix + 'n_goals_before_cycle'] = 0
-        csv_line[prefix + 'n_goals_benefit'] = 0  # Goals which have explicit benefit
+        csv_line[prefix + 'n_pos_goals_benefit'] = 0  # Goals which have explicit positive benefit
+        csv_line[prefix + 'n_neg_goals_benefit'] = 0  # Goals which have explicit negative benefit
         for grounded_goal in goals:
             goal_name = grounded_goal.name
             if '__' in goal_name:
@@ -22,7 +23,10 @@ class EvalUtils:
             params_str = ', '.join(goal_params)
 
             if goal_name in adg.goal_benefits and params_str in adg.goal_benefits[goal_name]:
-                csv_line[prefix + 'n_goals_benefit'] += 1
+                if adg.goal_benefits[goal_name][params_str] > 0:
+                    csv_line[prefix + 'n_pos_goals_benefit'] += 1
+                else:
+                    csv_line[prefix + 'n_neg_goals_benefit'] += 1
 
             # Windows
             if goal_name in adg.timing_windows:

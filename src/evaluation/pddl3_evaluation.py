@@ -123,7 +123,9 @@ class PDDL3GRAPEVAL:
                            'final_n_goals_in_cycle',
                            'final_n_goals_over_cycle',
                            'final_n_goals_before_cycle', 
-                           'final_n_goals_benefit',
+                           'final_n_pos_goals_benefit',
+                           'final_n_neg_goals_benefit',
+                           'max_n_pos_goals_benefit', 'max_n_neg_goals_benefit',
                            'plan_length', 'plan_makespan', 'plan_metric',
                            'initial_state_benefit', 'final_minus_initial_benefit',
                            'max_benefit', 'max_positive_benefit', 'final_benefit'
@@ -136,6 +138,14 @@ class PDDL3GRAPEVAL:
         print(f'Closed CSV file {self.csv_file.name}')
     
     def write_csv_line(self, line):
+        # Count number of positive and negative specific goal benefits
+        self.csv_line['max_n_pos_goals_benefit'] = self.csv_line['max_n_neg_goals_benefit'] = 0
+        for g, params in self.pddl3.adg.goal_benefits.items():
+            for p, v in params.items():
+                if v > 0:
+                    self.csv_line['max_n_pos_goals_benefit'] += 1
+                else:
+                    self.csv_line['max_n_neg_goals_benefit'] += 1
         for field in self.csv_fields:
             assert field in line, f'Field {field} not in line {line}'
         for field in line:

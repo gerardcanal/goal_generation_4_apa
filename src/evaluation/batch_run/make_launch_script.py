@@ -1,10 +1,11 @@
 #!/usr/bin/python3
 import argparse
+import os
 SCRIPTS_FOLDER = '/scratch/gerard/code/goal_generation_4_apa/src/evaluation/batch_run'
 BASE_CMD = f'time bash {SCRIPTS_FOLDER}/run_container.sh '
 
 def make_goalgen_sh(args):
-    PLANNER_TIMEOUTS = [30]#, 150]# , 300] # Do 300 if there's time...!
+    PLANNER_TIMEOUTS = [30]#[30, 150]
     REMOVAL_STRATEGY = ['worst_n', 'random']
     REMOVE_PERCENT = [10, 25, 50]
     ret = []
@@ -19,7 +20,7 @@ def make_goalgen_sh(args):
                     cmd += removal_strategy + ' ' # REMOVAL_STRATEGY=$4
                     cmd += str(remove_percent) + ' ' # REMOVE_PERCENT=$5
                     cmd += args.results_folder + ' ' # RESULTS_FOLDER=$6
-                    t = float(planner_timeout)*100 / remove_percent
+                    t = float(planner_timeout)*100 / remove_percent + (10 if removal_strategy == 'worst_n' else 0)
                     ret.append((t, cmd))
     return ret
 
@@ -54,6 +55,8 @@ def make_pddl3_sh(args):
 def make_scripts(cmds, output_folder, num_splits, type):
     if output_folder[-1] != '/':
         output_folder += '/'
+    os.makedirs(output_folder + 'completed', exist_ok=True)
+
     cmds = sorted(cmds, reverse=True)
     files = []
     counters = []
