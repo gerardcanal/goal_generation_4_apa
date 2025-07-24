@@ -128,8 +128,9 @@ class GGEval(GoalGenerationPipeline):
         self.csv_line['final_benefit'] = final_benefit
         self.csv_line['benefit_difference'] = final_benefit - self.csv_line['initial_gen_benefit']
         self.csv_line['total_time'] = end_time - start_time
-        self.csv_line['plan_length'] = len(plan)
-        self.csv_line['plan_makespan'] = PlanUtils.compute_plan_makespan(plan)
+        parsed_plan = PlanUtils.get_plan_as_list(plan[2])
+        self.csv_line['plan_length'] = len(parsed_plan)
+        self.csv_line['plan_makespan'] = PlanUtils.compute_plan_makespan(parsed_plan)
         self.csv_line['comment'] += f'Completed successfully. '
         EvalUtils.count_goals_in_windows(self.csv_line, self.goals_wo_benefit(goals), last_times_map, self.goal_generator.agg, 'final')
         self.write_csv_line(self.csv_line)
