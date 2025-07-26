@@ -248,6 +248,7 @@ class PDDL3GRAPEVAL:
             self.csv_line['plan_length'] = 0
             self.csv_line['final_solved_goals'] = 0
             self.csv_line['final_minus_initial_goals'] = self.csv_line['final_solved_goals'] - self.csv_line['initial_solved_goals']
+            self.csv_line['new_goals'] = self.csv_line['new_goals_benefit'] = 0
             last_times_map = {}
             goals = []
 

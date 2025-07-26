@@ -127,10 +127,16 @@ class _PredicateInCondition:
 
 
 if __name__ == "__main__":
-    domain_file = os.path.dirname(__file__) + '/../domains/rovers-time-simple-automatic/domain.pddl'
-    problem_file = os.path.dirname(__file__) + '/../domains/rovers-time-simple-automatic/instance-20.pddl'
-    domain_extractor = PDDLExtractor(domain_file, problem_file)
-    print(domain_extractor.get_domain_name())
-    print(domain_extractor.find_potential_goals())
+    path = os.path.dirname(__file__) + '/../domains/'
+    for domain in os.listdir(path):
+        domain_file = path + domain + '/domain.pddl'
+        for problem_file in os.listdir(path + domain):
+            if 'domain' in problem_file: continue
+            problem_file = path + domain + '/' + problem_file
+            domain_extractor = PDDLExtractor(domain_file, problem_file)
+            print(domain_extractor.get_domain_name())
+            pg = domain_extractor.find_potential_goals()
+            print(f"Found {len(pg)} potential goals:")
+            print('  ', pg)
 
 
