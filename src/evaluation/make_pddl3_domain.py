@@ -47,25 +47,31 @@ class MakePDDL3GRAP:
         for i, g in enumerate(self.all_goals):
             pddl_goal_metric += (f'    (preference p{i} {g})\n')
         pddl_goal_metric += ('))\n')
-        pddl_goal_metric += '(:metric minimize '
         if self.time_factor > 0 or self.violated_prefs_factor > 0:
+            pddl_goal_metric += '(:metric minimize '
             pddl_goal_metric += '(+ '
-        if self.time_factor > 0:
-            func = 'total-time' if self.is_domain_durative else 'total-cost'
-            pddl_goal_metric += f'(* {self.time_factor} ({func})) '
-        pddl_goal_metric += f'(* {self.benefit_factor} (total_benefit))'
-        if self.add_violated_prefs_factor():
-            pddl_goal_metric += f' (* {self.violated_prefs_factor} (+'
-        if self.violated_prefs_factor > 0:
-            pddl_goal_metric += '\n'
-            for i in range(len(self.all_goals)):
-                pddl_goal_metric += (f'    (is-violated p{i})\n')
-                #pddl_goal_metric += (f' (is-violated p{i})')
-        if self.add_violated_prefs_factor():
-            pddl_goal_metric += '  ))\n'
-        if self.time_factor > 0 or self.violated_prefs_factor > 0:
-            pddl_goal_metric += ')'
-        pddl_goal_metric += (')')
+            if self.time_factor > 0:
+                func = 'total-time' if self.is_domain_durative else 'total-cost'
+                pddl_goal_metric += f'(* {self.time_factor} ({func})) '
+            pddl_goal_metric += f'(* {self.benefit_factor} (total_benefit))'
+            if self.add_violated_prefs_factor():
+                pddl_goal_metric += f' (* {self.violated_prefs_factor} (+'
+            if self.violated_prefs_factor > 0:
+                pddl_goal_metric += '\n'
+                for i in range(len(self.all_goals)):
+                    pddl_goal_metric += (f'    (is-violated p{i})\n')
+                    #pddl_goal_metric += (f' (is-violated p{i})')
+            if self.add_violated_prefs_factor():
+                pddl_goal_metric += '  ))\n'
+            if self.time_factor > 0 or self.violated_prefs_factor > 0:
+                pddl_goal_metric += ')'
+            pddl_goal_metric += (')')
+        else:
+            if self.benefit_factor < 0: self.benefit_factor = abs(self.benefit_factor)
+            if self.benefit_factor > 0 and self.benefit_factor != 1:
+                pddl_goal_metric += f'(:metric maximize (* {self.benefit_factor} (total_benefit)))\n'
+            else:
+                pddl_goal_metric += '(:metric maximize (total_benefit))\n'
         #print(pddl_goal_metric)
 
         problem = copy.deepcopy(self.adg.problem)

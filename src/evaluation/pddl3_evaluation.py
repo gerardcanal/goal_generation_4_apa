@@ -234,7 +234,10 @@ class PDDL3GRAPEVAL:
             self.csv_line['final_minus_initial_benefit'] = total_benefit - self.csv_line['initial_state_benefit']
             self.csv_line['plan_length'] = len(plan)
 
-            violated_prefs = -((self.args.time_factor * mk) + (total_benefit * self.args.benefit_factor)-float(self.csv_line['plan_metric']))/self.args.violated_prefs_factor
+            if self.args.violated_prefs_factor > 0: 
+                violated_prefs = -((self.args.time_factor * mk) + (total_benefit * self.args.benefit_factor)-float(self.csv_line['plan_metric']))/self.args.violated_prefs_factor
+            else:
+                violated_prefs = 0
             print('Violated preferences: ' + str(violated_prefs))
             metric = (self.args.time_factor * mk) + (total_benefit * self.args.benefit_factor) + (self.args.violated_prefs_factor*violated_prefs)
             print('Computed metric = ' + str(metric))
