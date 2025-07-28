@@ -52,13 +52,14 @@ class PDDL3GRAPEVAL:
         self.csv_line['max_benefit'] = self.pddl3.adg.max_gainable_benefit[0]
         self.csv_line['max_positive_benefit'] = self.pddl3.adg.max_gainable_benefit[1]
         planning_start_time = time.time()
+        uuid = self.pddl3.adg.uuid
         cmd = f'timeout {self.planner_timeout} ' + self.planner_exec + ' -n ' + self.domain_file + ' ' + self.problem_file + ' | grep -v \\(G\\)'
         if CHECK_OUTPUT:
-            cmd += ' | tee /tmp/planner_output.txt'
-        print(cmd)
+            cmd += f' | tee /tmp/{uuid}_planner_output.txt'
+        print(cmd, 'UUID:', uuid)
         print('Running planner for ' + str(self.planner_timeout) + ' seconds...')
         try:
-            stderr_f = open("/tmp/planner_stderr.txt", "w")
+            stderr_f = open(f"/tmp/{uuid}_planner_stderr.txt", "w")
             output = subprocess.check_output(cmd, shell=True, stderr=stderr_f).decode('utf-8')  # also stderr=subprocess.DEVNULL or subprocess.STDOUT
             stderr_f.close()
         except subprocess.CalledProcessError as e:
