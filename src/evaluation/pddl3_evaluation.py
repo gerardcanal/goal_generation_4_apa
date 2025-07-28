@@ -17,13 +17,13 @@ import copy
 USE_BENEFIT = True
 USE_CONDITIONAL_TIMED_EFFECTS = True
 BENEFIT_FACTOR = -1 #-0.01
-TIME_FACTOR = 0.003 # 0.03
-VIOLATED_PREFS_FACTOR = 1
+TIME_FACTOR = 0.05 # 0.03
+VIOLATED_PREFS_FACTOR = 0
 PLANNER_EXEC = "/home/gerard/Nextcloud/optic-clp/tuned_tautologous/optic-cplex"
 PLANNER_EXEC = "/home/gerard/Nextcloud/optic-clp/optic-cplex"
 PLANNER_EXEC = "/home/gerard/Nextcloud/optic-clp/contradictory_tuned/optic-cplex"
 PLANNER_EXEC = "/home/gerard/Nextcloud/optic-clp/optic-clp"
-PLANNER_TIMEOUT = 300
+PLANNER_TIMEOUT = 600
 CHECK_OUTPUT = True
 
 class PDDL3GRAPEVAL:
@@ -58,7 +58,9 @@ class PDDL3GRAPEVAL:
         print(cmd)
         print('Running planner for ' + str(self.planner_timeout) + ' seconds...')
         try:
-            output = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT).decode('utf-8')  # also stderr=subprocess.DEVNULL
+            stderr_f = open("/tmp/planner_stderr.txt", "w")
+            output = subprocess.check_output(cmd, shell=True, stderr=stderr_f).decode('utf-8')  # also stderr=subprocess.DEVNULL or subprocess.STDOUT
+            stderr_f.close()
         except subprocess.CalledProcessError as e:
             if e.returncode != 124:  # 124 is timeout's return code when killed successfully
                 print('Planner failed with error code ' + str(e.returncode))
@@ -263,7 +265,7 @@ def check_args():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("-d", '--domain', type=str,  help="Domain to be evaluated", default=os.path.dirname(__file__) + '/../../domains/rovers-time-simple-automatic/domain.pddl')
     parser.add_argument("-p", '--problem', type=str,  help="Problem to be evaluated", default=os.path.dirname(__file__) + '/../../domains/rovers-time-simple-automatic/instance-20.pddl')
-    parser.add_argument("-g", '--cfg_path', type=str,  help="Config YAML file with benefits", default=os.path.dirname(__file__) + '/../../evaluation_cfgs/rovers/L4_n10_lb-500_ub5/cfg.yaml')
+    parser.add_argument("-g", '--cfg_path', type=str,  help="Config YAML file with benefits", default=os.path.dirname(__file__) + '/../../evaluation_cfgs/rovers/LP2_n60_lb-500_ub5/cfg.yaml')
 
     parser.add_argument("-o", '--output', type=str,  help="Output csv file", default='/tmp/pddl3_test.csv')
 
