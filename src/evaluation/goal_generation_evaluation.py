@@ -7,6 +7,7 @@ import sys; import os; sys.path.append(os.path.dirname(os.path.dirname(os.path.r
 
 from ILP_goal_generation_pipeline import GoalGenerationPipeline, parse_args, eprint
 import time
+import numpy as np
 from eval_utils import EvalUtils
 from plan_utils import PlanUtils
 
@@ -26,6 +27,8 @@ class GGEval(GoalGenerationPipeline):
         self.csv_line['comment'] = ''
         self.csv_line['planner_timeout'] = self.planner_timeout
         self.csv_line.update(self.goal_generator.agg.init_times)
+        self.initial_state_goals = self.initial_state_goals()  # NG26
+        self.csv_line['num_goals_initial_state'] = len(self.initial_state_goals)  # NG26
 
     def csv_header(self, write_header):
         self.csv_fields = ['init_total_time', 'potential_goals_time', 'unreachable_goals_time', 'mutexes_time', 
@@ -48,6 +51,7 @@ class GGEval(GoalGenerationPipeline):
                            'initial_gen_benefit', 'max_benefit', 'max_positive_benefit', 'final_benefit', 'benefit_difference',
                            'measured_planning_time', 'computed_planning_time', 'solved_reported_planning_time',
                                                      'first_computed_planning_time', 'first_solved_reported_planning_time',
+                           'num_goals_initial_state', 'initial_gen_inistate_goals', 'initial_new_goals', 'initial_benefit_new_goals', 'final_solved_new_goals', 'final_benefit_solved_new_goals', 'final_solved_gen_inistate_goals', # NG26
                            'comment'
                           ]
         if write_header:
@@ -74,6 +78,7 @@ class GGEval(GoalGenerationPipeline):
             eprint('No goals found!')
             self.csv_line['comment'] += '[WARN] No goals found! '
             self.csv_line['num_generated_goals'] = self.csv_line['initial_gen_benefit'] = 0
+            self.csv_line['initial_new_goals'] = self.csv_line['initial_benefit_new_goals'] = self.csv_line['final_solved_new_goals'] = self.csv_line['final_benefit_solved_new_goals'] = self.csv_line['final_solved_gen_inistate_goals'] = self.csv_line['initial_gen_inistate_goals'] = 0 # NG26
             self.csv_line['gg_solver_time'] = computed_solver_time
             self.csv_line['final_solved_goals'] =  self.csv_line['plan_makespan'] = self.csv_line['final_benefit'] = self.csv_line['num_generated_goals'] = 0
             self.csv_line['total_time'] = time.time() - start_time
@@ -94,6 +99,13 @@ class GGEval(GoalGenerationPipeline):
         # Goals metrics
         self.csv_line['num_generated_goals'] = len(goals)
         self.csv_line['initial_gen_benefit'] = solver_benefit
+
+        new_goals = [g for g in goals if g[0] not in self.initial_state_goals] # goals generated not in init state NG26
+        self.csv_line['initial_new_goals'] = len(new_goals) # NG26
+        self.csv_line['initial_benefit_new_goals'] = self.compute_benefit_goal_list(new_goals, last_times_map, True) #NG26
+        initial_goals = [g for g in goals if g[0] in self.initial_state_goals] # goals generated in init state NG26
+        self.csv_line['initial_gen_inistate_goals'] = len(initial_goals) # NG26
+
         EvalUtils.count_goals_in_windows(self.csv_line, self.goals_wo_benefit(goals), last_times_map, self.goal_generator.agg, 'initial')
 
         planning_start_time = time.time()
@@ -102,6 +114,7 @@ class GGEval(GoalGenerationPipeline):
             eprint(f'[WARN] Failed to solve for any set of goals! ({plan})')
             self.csv_line['comment'] += f'[WARN] Failed to solve for any set of goals! ({plan}) '
             self.csv_line['final_solved_goals'] =  self.csv_line['plan_makespan'] = self.csv_line['final_benefit'] = 0
+            self.csv_line['final_solved_new_goals'] = self.csv_line['final_benefit_solved_new_goals'] = self.csv_line['final_solved_gen_inistate_goals'] = 0 # NG26
             self.csv_line['total_time'] = time.time() - start_time
             self.csv_line['plan_length'] = self.csv_line['benefit_difference'] = -1
             self.csv_line['measured_planning_time'] = self.csv_line['computed_planning_time'] = self.csv_line['solved_reported_planning_time'] = -1
@@ -127,6 +140,14 @@ class GGEval(GoalGenerationPipeline):
         self.csv_line['final_solved_goals'] = len(goals)
         self.csv_line['final_benefit'] = final_benefit
         self.csv_line['benefit_difference'] = final_benefit - self.csv_line['initial_gen_benefit']
+
+        new_goals = [g for g in goals if g[0] not in self.initial_state_goals] # goals generated not in init state NG26
+        self.csv_line['final_solved_new_goals'] = len(new_goals) # NG26
+        self.csv_line['final_benefit_solved_new_goals'] = self.compute_benefit_goal_list(new_goals, last_times_map, True) # NG26
+        initial_goals = [g for g in goals if g[0] in self.initial_state_goals] # goals generated in init state NG26
+        self.csv_line['final_solved_gen_inistate_goals'] = len(initial_goals) # NG26
+
+
         self.csv_line['total_time'] = end_time - start_time
         parsed_plan = PlanUtils.get_plan_as_list(plan[2])
         self.csv_line['plan_length'] = len(parsed_plan)
@@ -154,6 +175,21 @@ class GGEval(GoalGenerationPipeline):
             assert field in self.csv_fields, f'Field {field} not in csv fields'
         self.csv_file.write(','.join([str(line[field]) for field in self.csv_fields]) + '\n')
         self.csv_file.flush()
+
+    def initial_state_goals(self): # NG26
+        # Returns a list of goals that are true in the initial state
+        achieved_goals = []
+
+        problem = self.goal_generator.agg.pddl_extractor.problem
+        state = problem.get_initial_state()
+        state = [problem.grounding.get_proposition_from_id(p) for p in np.nonzero(state.logical)[0]]
+
+        for g in self.goal_generator.potential_goals:
+            for p in state:
+                if str(g) == str(p): 
+                    achieved_goals.append(g)
+                    break
+        return achieved_goals
 
     def __del__(self):
         self.csv_file.close()
