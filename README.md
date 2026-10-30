@@ -2,7 +2,10 @@
 
 ## Abstract
 Generating objectives and reasoning about them is key for intelligent planning agents to become more autonomous.
-Once a set of achievable goals has been chosen, a symbolic planner can find an executable plan to fulfil them. However, finding these goals is a complex problem when the aim is to optimise conflicting metrics such as goal benefit, plan cost, and its makespan. In this paper, we first propose a method to identify a set of potential goals in a PDDL domain. Next, we find the achievable subset of goals that yield the most benefit by posing the problem as an integer linear program. Finally, a planner is used to solve the resulting goal subset. The proposed method is generic and planner-independent, generating sets of goals that are reachable and not mutually exclusive, thus increasing the chances of finding a solvable plan. We demonstrate the effectiveness of the proposed approach in comparison with a baseline oversubscription planner.
+Once a set of achievable goals has been chosen, a symbolic planner can find an executable plan to fulfil them. However, finding these goals is a complex problem when the aim is to optimise conflicting metrics such as goal benefit, plan cost, and its makespan.
+In this paper, we first propose a method to identify a set of potential goals in a temporal PDDL domain. Next, we find the achievable subset of goals that yields the most benefit by posing the problem as an integer linear program. Finally, a planner is used to solve the resulting subset of goals. 
+The proposed method is generic and planner-independent, generating sets of goals that are neither provably unreachable nor mutually exclusive, thereby increasing the likelihood of finding a solvable plan.
+We demonstrate the effectiveness of the proposed approach in comparison with a baseline oversubscription planner.
 
 
 ## Usage
